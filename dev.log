@@ -1,0 +1,71 @@
+
+> canvas-ui@0.1.0 dev
+> next dev
+
+▲ Next.js 16.2.9 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.192.1:3000
+- Environments: .env.local
+✓ Ready in 1694ms
+
+○ Compiling / ...
+⨯ ./src/app/globals.css:463:8
+Parsing CSS source code failed
+  [90m461 |[0m   }
+  [90m462 |[0m }
+[31m[1m>[0m [90m463 |[0m @[36mimport[0m url([32m"https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=...[0m
+  [90m    |[0m        [31m[1m^[0m
+  [90m464 |[0m * {
+  [90m465 |[0m   box-sizing: border-box;
+  [90m466 |[0m }
+
+@import rules must precede all rules aside from @charset and @layer statements
+
+Generated code of PostCSS transform of file content of src/app/globals.css:
+./src/app/globals.css:463:8
+  [90m461 |[0m   }
+  [90m462 |[0m }
+[31m[1m>[0m [90m463 |[0m @[36mimport[0m url([32m"https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=...[0m
+  [90m    |[0m        [31m[1m^[0m
+  [90m464 |[0m * {
+  [90m465 |[0m   box-sizing: border-box;
+  [90m466 |[0m }
+
+Import trace:
+  Client Component Browser:
+    ./src/app/globals.css [Client Component Browser]
+    ./src/app/layout.tsx [Server Component]
+
+
+ GET / 500 in 8.3s (next.js: 7.5s, application-code: 835ms)
+⨯ ./src/app/globals.css:463:8
+Parsing CSS source code failed
+  [90m461 |[0m   }
+  [90m462 |[0m }
+[31m[1m>[0m [90m463 |[0m @[36mimport[0m url([32m"https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=...[0m
+  [90m    |[0m        [31m[1m^[0m
+  [90m464 |[0m * {
+  [90m465 |[0m   box-sizing: border-box;
+  [90m466 |[0m }
+
+@import rules must precede all rules aside from @charset and @layer statements
+
+Generated code of PostCSS transform of file content of src/app/globals.css:
+./src/app/globals.css:463:8
+  [90m461 |[0m   }
+  [90m462 |[0m }
+[31m[1m>[0m [90m463 |[0m @[36mimport[0m url([32m"https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=...[0m
+  [90m    |[0m        [31m[1m^[0m
+  [90m464 |[0m * {
+  [90m465 |[0m   box-sizing: border-box;
+  [90m466 |[0m }
+
+Import trace:
+  Client Component Browser:
+    ./src/app/globals.css [Client Component Browser]
+    ./src/app/layout.tsx [Server Component]
+
+
+ GET / 500 in 63ms (next.js: 44ms, application-code: 19ms)
+✓ Compiled in 324ms
+✓ Compiled in 209ms

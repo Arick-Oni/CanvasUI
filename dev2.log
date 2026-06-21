@@ -1,0 +1,130 @@
+
+> canvas-ui@0.1.0 dev
+> next dev
+
+▲ Next.js 16.2.9 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.192.1:3000
+- Environments: .env.local
+✓ Ready in 769ms
+
+ GET / 200 in 374ms (next.js: 204ms, application-code: 170ms)
+ POST /api/generate-objects 500 in 1387ms (next.js: 1026ms, application-code: 361ms)
+ POST /api/generate-objects 500 in 190ms (next.js: 3ms, application-code: 187ms)
+ GET / 200 in 316ms (next.js: 154ms, application-code: 162ms)
+ GET / 200 in 430ms (next.js: 212ms, application-code: 218ms)
+ GET / 200 in 716ms (next.js: 399ms, application-code: 317ms)
+ POST /api/edit-object 500 in 1117ms (next.js: 680ms, application-code: 437ms)
+  Reload env: .env.local
+⚠ Found a change in next.config.ts. Restarting the server to apply the changes...
+▲ Next.js 16.2.9 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.192.1:3000
+- Environments: .env.local
+✓ Ready in 2.4s
+
+ GET / 200 in 1001ms (next.js: 752ms, application-code: 249ms)
+ GET / 200 in 113ms (next.js: 12ms, application-code: 102ms)
+ POST /api/generate-objects 200 in 30.3s (next.js: 411ms, application-code: 29.9s)
+ POST /api/edit-object 200 in 3.4s (next.js: 538ms, application-code: 2.8s)
+ POST /api/export-html 500 in 47s (next.js: 2.7s, application-code: 45s)
+ POST /api/export-html 200 in 58s (next.js: 10ms, application-code: 58s)
+ GET / 200 in 687ms (next.js: 208ms, application-code: 479ms)
+✓ Compiled in 388ms
+✓ Compiled in 58ms
+✓ Compiled in 370ms
+✓ Compiled in 208ms
+ GET / 200 in 1001ms (next.js: 301ms, application-code: 700ms)
+ GET / 200 in 394ms (next.js: 65ms, application-code: 329ms)
+✓ Compiled in 112ms
+ GET / 200 in 355ms (next.js: 195ms, application-code: 161ms)
+ GET / 200 in 65ms (next.js: 10ms, application-code: 55ms)
+ POST /api/generate-objects 200 in 27.6s (next.js: 14ms, application-code: 27.6s)
+✓ Compiled in 56ms
+ GET / 200 in 251ms (next.js: 106ms, application-code: 145ms)
+ GET / 200 in 63ms (next.js: 9ms, application-code: 54ms)
+[browser] Uncaught ReferenceError: exporting is not defined
+    at Home (file://C:/Users/arick.sarkar/Desktop/Save The Children Techhub/Third Week/Web Designer/CanvasUI/.next/dev/static/chunks/_0epfaj8._.js?id=%255Bproject%255D%252Fsrc%252Fapp%252Fpage.tsx+%255Bapp-client%255D+%2528ecmascript%2529:735:43)
+    at Object.react_stack_bottom_frame (file://C:/Users/arick.sarkar/Desktop/Save The Children Techhub/Third Week/Web Designer/CanvasUI/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_096_9a-._.js:15037:24)
+    at renderWithHooks (file://C:/Users/arick.sarkar/Desktop/Save The Children Techhub/Third Week/Web Designer/CanvasUI/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_096_9a-._.js:4620:24)
+    at updateFunctionComponent (file://C:/Users/arick.sarkar/Desktop/Save The Children Techhub/Third Week/Web Designer/CanvasUI/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_096_9a-._.js:6081:21)
+    at beginWork (file://C:/Users/arick.sarkar/Desktop/Save The Children Techhub/Third Week/Web Designer/CanvasUI/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_096_9a-._.js:6691:24)
+    at runWithFiberInDEV (file://C:/Users/arick.sarkar/Desktop/Save The Children Techhub/Third Week/Web Designer/CanvasUI/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_096_9a-._.js:965:74)
+    at performUnitOfWork (file://C:/Users/arick.sarkar/Desktop/Save The Children Techhub/Third Week/Web Designer/CanvasUI/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_096_9a-._.js:9555:97)
+    at workLoopSync (file://C:/Users/arick.sarkar/Desktop/Save The Children Techhub/Third Week/Web Designer/CanvasUI/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_096_9a-._.js:9449:40)
+    at renderRootSync (file://C:/Users/arick.sarkar/Desktop/Save The Children Techhub/Third Week/Web Designer/CanvasUI/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_096_9a-._.js:9433:13)
+    at performWorkOnRoot (file://C:/Users/arick.sarkar/Desktop/Save The Children Techhub/Third Week/Web Designer/CanvasUI/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_096_9a-._.js:9061:186)
+    at performSyncWorkOnRoot (file://C:/Users/arick.sarkar/Desktop/Save The Children Techhub/Third Week/Web Designer/CanvasUI/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_096_9a-._.js:10263:9)
+    at flushSyncWorkAcrossRoots_impl (file://C:/Users/arick.sarkar/Desktop/Save The Children Techhub/Third Week/Web Designer/CanvasUI/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_096_9a-._.js:10179:316)
+    at processRootScheduleInMicrotask (file://C:/Users/arick.sarkar/Desktop/Save The Children Techhub/Third Week/Web Designer/CanvasUI/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_096_9a-._.js:10200:106)
+    at <unknown> (file://C:/Users/arick.sarkar/Desktop/Save The Children Techhub/Third Week/Web Designer/CanvasUI/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_096_9a-._.js:10274:158)
+    at ClientPageRoot (file://C:/Users/arick.sarkar/Desktop/Save The Children Techhub/Third Week/Web Designer/CanvasUI/.next/dev/static/chunks/node_modules_next_dist_1e9_p6y._.js:4461:50)
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+✓ Compiled in 566ms
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+⨯ ReferenceError: exporting is not defined
+    at Home (src\app\page.tsx:359:23)
+  357 |           <button
+  358 |             onClick={handleExport}
+> 359 |             disabled={exporting}
+      |                       ^
+  360 |             className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-semibold text-white...
+  361 |           >
+  362 |             {exporting ? ( {
+  digest: '4277975468'
+}
+⨯ ReferenceError: exporting is not defined
+    at Home (src\app\page.tsx:359:23)
+  357 |           <button
+  358 |             onClick={handleExport}
+> 359 |             disabled={exporting}
+      |                       ^
+  360 |             className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-semibold text-white...
+  361 |           >
+  362 |             {exporting ? ( {
+  digest: '4277975468'
+}
+ GET / 500 in 438ms (next.js: 109ms, application-code: 329ms)
+ GET / 500 in 141ms (next.js: 9ms, application-code: 132ms)
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+✓ Compiled in 38ms
+⨯ ReferenceError: exporting is not defined
+    at Home (src\app\page.tsx:425:12)
+  423 |           }
+  424 |         >
+> 425 |           {exporting ? (
+      |            ^
+  426 |             /* Progress state */
+  427 |             <div className="flex flex-1 flex-col items-center justify-center gap-5">
+  428 |               <span className="h-7 w-7 animate-spin rounded-full border-[3px] border-indi... {
+  digest: '4277975468'
+}
+⨯ ReferenceError: exporting is not defined
+    at Home (src\app\page.tsx:425:12)
+  423 |           }
+  424 |         >
+> 425 |           {exporting ? (
+      |            ^
+  426 |             /* Progress state */
+  427 |             <div className="flex flex-1 flex-col items-center justify-center gap-5">
+  428 |               <span className="h-7 w-7 animate-spin rounded-full border-[3px] border-indi... {
+  digest: '4277975468'
+}
+ GET / 500 in 396ms (next.js: 107ms, application-code: 289ms)
+ GET / 500 in 398ms (next.js: 240ms, application-code: 158ms)
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+✓ Compiled in 36ms
+ GET / 200 in 247ms (next.js: 73ms, application-code: 173ms)
+ GET / 200 in 77ms (next.js: 5ms, application-code: 73ms)
+✓ Compiled in 29ms
+ GET / 200 in 126ms (next.js: 69ms, application-code: 57ms)
+ GET / 200 in 41ms (next.js: 3ms, application-code: 38ms)
+ GET / 200 in 136ms (next.js: 11ms, application-code: 125ms)
+ POST /api/generate-objects 200 in 63s (next.js: 260ms, application-code: 62s)
+ GET / 200 in 1014ms (next.js: 345ms, application-code: 669ms)
+ POST /api/generate-objects 200 in 30.4s (next.js: 17ms, application-code: 30.4s)
+ POST /api/generate-objects 500 in 1392ms (next.js: 9ms, application-code: 1383ms)
