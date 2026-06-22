@@ -52,7 +52,6 @@ async function renderToJpegBase64(html: string): Promise<string | null> {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function extractInlineData(dataUrl: string): { mimeType: string; data: string } | null {
   const m = dataUrl.match(/^data:([^;]+);base64,([\s\S]+)$/);
   return m ? { mimeType: m[1], data: m[2] } : null;
