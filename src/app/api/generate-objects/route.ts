@@ -55,14 +55,15 @@ TYPOGRAPHIC SCALE:
   Caption / label:    fontSize 13, fontWeight 400
 
 REQUIREMENTS for every design:
-  • At least one full-width background rect (z:0, fill:#f8fafc or #ffffff).
-  • A navbar rect (z:1, fill:#ffffff, elevation:1 or stroke).
-  • Named section rects (hero, features, footer…) layered above.
-  • Cards get white fill + elevation:2 + radius:12.
-  • Buttons: rect fill:#4f46e5 radius:8 z:N, then text on top z:N+1.
-  • Text objects always sit on top of their container rect.
-  • Aim for 30–50 objects so the design is visually complete.
-  • Use the design-system colors — do not invent arbitrary hex values.
+  • At least one full-width background rect (z:0, fill:#f8fafc or #0f172a).
+  • A top navbar rect (z:1, fill:#ffffff or #1e293b, elevation:1 or stroke).
+  • Named section containers (hero, features grid, pricing/CTA cards, footer) layered above.
+  • Cards get white fill + elevation:2 + radius:12 or 16 + subtle stroke "#e2e8f0".
+  • Pill badges/tags (rect fill:#eef2ff radius:999 z:N, text fill:#4f46e5 fontSize:12 fontWeight:600).
+  • Buttons: gradient/primary rect fill:#4f46e5 radius:8 z:N, then text on top z:N+1.
+  • Text objects always sit on top of their container rect with high contrast textColor.
+  • Aim for 35–55 objects so the layout is detailed, balanced, and visually impressive.
+  • Use design-system tokens and clean typography scaling.
 `.trim();
 
 const responseSchema = {

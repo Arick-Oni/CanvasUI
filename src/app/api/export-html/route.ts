@@ -10,24 +10,21 @@ export const runtime = "nodejs";
 const SYSTEM_PROMPT =
   DESIGN_SYSTEM +
   "\n---\n" +
-  "You are given a UI layout as objects with absolute positions and sizes on a 1200×800 canvas, " +
-  "and optionally a screenshot of the canvas for visual reference. " +
-  "These coordinates are the CURRENT, AUTHORITATIVE state of the design, including any positions, sizes, " +
-  "or ordering the user has manually changed since the layout was first generated — treat them as ground " +
-  "truth for structure, not as a rough sketch to override with a generic template. " +
-  "Derive row/column grouping and reading order directly from the coordinates: elements whose y-ranges " +
-  "overlap belong in the same row (ordered left-to-right by x); elements stacked with little y-overlap but " +
-  "shared x-range belong in the same column, in top-to-bottom order. " +
-  "Using that derived structure, identify header/nav/hero/feature sections and produce clean, SEMANTIC, " +
-  "RESPONSIVE HTML using Tailwind CSS (loaded from the Play CDN) and the design system tokens. " +
-  "Use proper tags by role (<header>, <nav>, <main>, <section>, <button>, <h1>, <h2>, <p>, …) " +
-  "and flex/grid for layout — do NOT hardcode absolute pixel positions in the output CSS, but the resulting " +
-  "flex/grid arrangement must reproduce the same relative order, grouping, and alignment as the given " +
-  "coordinates. Always re-derive the layout from the coordinates in THIS request — never fall back to a " +
-  "generic or previously-seen arrangement that doesn't match them. " +
-  "Include the Tailwind Play CDN <script> tag in <head>. " +
-  "Output ONE complete, self-contained HTML document (with <html>, <head>, <body>). " +
-  "Output ONLY the raw HTML — no explanations, no markdown, no code fences.";
+  "You are an expert UI/UX frontend engineer and web designer. You are given a UI layout as objects with " +
+  "absolute positions and sizes on a 1200×800 canvas, and optionally a screenshot for visual reference. " +
+  "These coordinates are the CURRENT, AUTHORITATIVE state of the design. " +
+  "Derive section grouping, row/column flow, and component structure from the coordinates. " +
+  "Produce visually STUNNING, HIGHLY POLISHED, SEMANTIC, and RESPONSIVE HTML powered by Tailwind CSS. " +
+  "CRITICAL DESIGN REQUIREMENTS:\n" +
+  "- Include <script src=\"https://cdn.tailwindcss.com\"></script> in <head>.\n" +
+  "- Include Google Font 'Inter' link in <head> and set body font to Inter.\n" +
+  "- Apply rich, modern styling: soft subtle card shadows (shadow-md/shadow-xl), smooth border radiuses (rounded-xl/rounded-2xl), subtle 1px border dividers (border-slate-200 or border-slate-700/50), vibrant indigo/violet gradient accents for CTAs, and sleek badges.\n" +
+  "- Use proper semantic HTML5 tags (<header>, <nav>, <main>, <section>, <article>, <footer>, <button>, <h1>, <h2>, <p>).\n" +
+  "- Layout must use modern Flexbox and CSS Grid — NEVER hardcode absolute positions.\n" +
+  "- Ensure rich contrast, elegant typography spacing, micro-hover interactions (e.g., transition-all hover:scale-[1.01]), and realistic placeholder icons or visual elements where appropriate.\n" +
+  "- Output ONE complete, self-contained HTML document (with <!DOCTYPE html>, <html>, <head>, <body>).\n" +
+  "- Output ONLY the raw HTML code — no markdown, no code block fences, no explanations.";
+
 
 function stripFences(text: string): string {
   return text.replace(/^```(?:html)?\r?\n?/i, "").replace(/\r?\n?```\s*$/i, "").trim();
