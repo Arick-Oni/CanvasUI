@@ -1,5 +1,5 @@
 # AI-Powered Design Scraper App: Technical Specification
-
+a
 This document provides a comprehensive technical design and step-by-step implementation guide for building a **standalone AI-powered design scraper**. The goal of this application is to crawl target websites (such as Save the Children), extract visual styles, graphics, and layout structures, and index them into a Vector Database to form a **RAG (Retrieval-Augmented Generation)** system for visual UI builders.
 
 ---
