@@ -3,7 +3,7 @@ import type { UIObject } from "./types";
 const CANVAS_W = 1200;
 const CANVAS_H = 800;
 
-// Elevation → CSS box-shadow presets matching the Fabric shadow presets.
+// Elevation → CSS box-shadow presets
 const SHADOW_CSS = [
   "",
   "box-shadow:0 2px 6px rgba(0,0,0,0.08);",
@@ -20,10 +20,8 @@ function esc(s: string): string {
 }
 
 // Build the inline style string for every element.
-// Fabric's default originX/originY is "left"/"top", so obj.x/y ARE the
-// top-left corner — they map directly to CSS left/top.
-// Fabric rotates around the object's centre, so we match with
-// transform-origin: center center.
+// The originX/originY is "left"/"top", so obj.x/y ARE the top-left corner.
+// Rotation is around the object's centre.
 function baseStyle(obj: UIObject, zIndex: number): string {
   const parts: string[] = [
     "position:absolute",
