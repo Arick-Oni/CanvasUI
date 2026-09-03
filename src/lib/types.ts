@@ -20,10 +20,15 @@ export type UIObject = {
 };
 
 export type SelectedObjectProps = {
-  objectType: "rect" | "text";
+  objectType: "rect" | "text" | "image";
   width: number;
   height: number;
-  // rect
+  z?: number;
+  angle?: number;
+  elevation?: number;
+  stroke?: string;
+  strokeWidth?: number;
+  // rect / image
   fill?: string;
   radius?: number;
   // text

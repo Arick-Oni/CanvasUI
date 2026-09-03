@@ -76,33 +76,116 @@ function PropertiesPanel({
         ))}
       </div>
 
-      {/* Rect controls */}
-      {p.objectType === "rect" && (
-        <div className="grid grid-cols-2 gap-2">
+      {/* Z and Angle */}
+      <div className="grid grid-cols-2 gap-2">
+        <label className="flex flex-col gap-1">
+          <span className="text-xs text-slate-500">Z-Index</span>
+          <input
+            type="number"
+            min={0}
+            value={p.z ?? 0}
+            onChange={(e) => {
+              const v = parseInt(e.target.value, 10);
+              if (!isNaN(v)) onUpdate({ z: v });
+            }}
+            className={inputCls}
+          />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs text-slate-500">Angle</span>
+          <input
+            type="number"
+            value={p.angle ?? 0}
+            onChange={(e) => {
+              const v = parseFloat(e.target.value);
+              if (!isNaN(v)) onUpdate({ angle: v });
+            }}
+            className={inputCls}
+          />
+        </label>
+      </div>
+
+      {/* Common Rect/Image controls */}
+      {(p.objectType === "rect" || p.objectType === "image") && (
+        <>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-slate-500">Fill</span>
+              <input
+                type="color"
+                value={p.fill ?? (p.objectType === "image" ? "#f1f5f9" : "#e2e8f0")}
+                onChange={(e) => onUpdate({ fill: e.target.value })}
+                className="h-7 w-full cursor-pointer rounded border border-slate-300 p-0.5"
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-slate-500">Radius</span>
+              <input
+                type="number"
+                min={0}
+                max={500}
+                value={p.radius ?? 0}
+                onChange={(e) => {
+                  const v = parseInt(e.target.value, 10);
+                  if (!isNaN(v) && v >= 0) onUpdate({ radius: v });
+                }}
+                className={inputCls}
+              />
+            </label>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-slate-500">Elevation</span>
+              <select
+                value={p.elevation ?? 0}
+                onChange={(e) => onUpdate({ elevation: parseInt(e.target.value, 10) })}
+                className={inputCls}
+              >
+                <option value="0">None</option>
+                <option value="1">Small</option>
+                <option value="2">Medium</option>
+                <option value="3">Large</option>
+              </select>
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-slate-500">Stroke W.</span>
+              <input
+                type="number"
+                min={0}
+                max={20}
+                value={p.strokeWidth ?? 1}
+                onChange={(e) => {
+                  const v = parseInt(e.target.value, 10);
+                  if (!isNaN(v) && v >= 0) onUpdate({ strokeWidth: v });
+                }}
+                className={inputCls}
+              />
+            </label>
+          </div>
+
           <label className="flex flex-col gap-1">
-            <span className="text-xs text-slate-500">Fill</span>
-            <input
-              type="color"
-              value={p.fill ?? "#e2e8f0"}
-              onChange={(e) => onUpdate({ fill: e.target.value })}
-              className="h-7 w-full cursor-pointer rounded border border-slate-300 p-0.5"
-            />
+            <span className="text-xs text-slate-500">Stroke Color</span>
+            <div className="flex gap-2 items-center">
+              <input
+                type="color"
+                value={p.stroke ?? "#000000"}
+                onChange={(e) => onUpdate({ stroke: e.target.value })}
+                className="h-7 w-8 cursor-pointer rounded border border-slate-300 p-0.5"
+                disabled={!p.stroke}
+              />
+              <label className="flex gap-1 items-center text-xs">
+                <input
+                  type="checkbox"
+                  checked={!!p.stroke}
+                  onChange={(e) => onUpdate({ stroke: e.target.checked ? "#cbd5e1" : undefined })}
+                  className="rounded border-slate-300"
+                />
+                Enable Stroke
+              </label>
+            </div>
           </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-xs text-slate-500">Radius</span>
-            <input
-              type="number"
-              min={0}
-              max={500}
-              value={p.radius ?? 0}
-              onChange={(e) => {
-                const v = parseInt(e.target.value, 10);
-                if (!isNaN(v) && v >= 0) onUpdate({ radius: v });
-              }}
-              className={inputCls}
-            />
-          </label>
-        </div>
+        </>
       )}
 
       {/* Text controls */}

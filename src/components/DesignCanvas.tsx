@@ -31,6 +31,8 @@ function extractProps(obj: UIObject): SelectedObjectProps {
       objectType: "text",
       width: obj.width,
       height: obj.height,
+      z: obj.z ?? 0,
+      angle: obj.angle ?? 0,
       text: obj.text ?? "",
       fontSize: obj.fontSize ?? 14,
       fontWeight: String(obj.fontWeight ?? "400"),
@@ -38,10 +40,15 @@ function extractProps(obj: UIObject): SelectedObjectProps {
     };
   }
   return {
-    objectType: "rect",
+    objectType: obj.type,
     width: obj.width,
     height: obj.height,
-    fill: obj.fill ?? "#e2e8f0",
+    z: obj.z ?? 0,
+    angle: obj.angle ?? 0,
+    elevation: obj.elevation ?? 0,
+    stroke: obj.stroke ?? "",
+    strokeWidth: obj.strokeWidth ?? 1,
+    fill: obj.fill ?? (obj.type === "image" ? "#f1f5f9" : "#e2e8f0"),
     radius: obj.radius ?? 0,
   };
 }
@@ -125,6 +132,11 @@ const DesignCanvas = forwardRef<DesignCanvasHandle, DesignCanvasProps>(
               const merged: UIObject = { ...o };
               if (changes.width !== undefined) merged.width = changes.width;
               if (changes.height !== undefined) merged.height = changes.height;
+              if (changes.z !== undefined) merged.z = changes.z;
+              if (changes.angle !== undefined) merged.angle = changes.angle;
+              if (changes.elevation !== undefined) merged.elevation = changes.elevation;
+              if (changes.stroke !== undefined) merged.stroke = changes.stroke;
+              if (changes.strokeWidth !== undefined) merged.strokeWidth = changes.strokeWidth;
               if (changes.fill !== undefined) merged.fill = changes.fill;
               if (changes.radius !== undefined) merged.radius = changes.radius;
               if (changes.text !== undefined) merged.text = changes.text;
@@ -133,6 +145,10 @@ const DesignCanvas = forwardRef<DesignCanvasHandle, DesignCanvasProps>(
               if (changes.textColor !== undefined) merged.textColor = changes.textColor;
               return merged;
             });
+            // Re-sort array if z-order changes
+            if (changes.z !== undefined) {
+              return next.sort((a, b) => (a.z ?? 0) - (b.z ?? 0)).map((o, idx) => ({ ...o, z: idx }));
+            }
             return next;
           });
         },
