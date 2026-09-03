@@ -315,8 +315,8 @@ export default function Home() {
     setError(null);
     try {
       const screenshot =
-        useScreenshot && selectedModel.supportsVision
-          ? canvasRef.current?.getCanvasScreenshot() ?? ""
+        useScreenshot && selectedModel.supportsVision && canvasRef.current
+          ? await canvasRef.current.getCanvasScreenshot()
           : undefined;
       const res = await fetch("/api/export-html", {
         method: "POST",

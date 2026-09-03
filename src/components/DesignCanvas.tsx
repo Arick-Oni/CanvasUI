@@ -1,6 +1,7 @@
 "use client";
-import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
-import * as fabric from "fabric";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState, useCallback } from "react";
+import Moveable from "react-moveable";
+import { toJpeg } from "html-to-image";
 import type { SelectedObjectProps, UIObject } from "@/lib/types";
 
 export type DesignCanvasHandle = {
@@ -10,7 +11,7 @@ export type DesignCanvasHandle = {
   getSelectedAsUIObject: () => UIObject | null;
   replaceObject: (id: string, newObj: UIObject) => void;
   getAllObjects: () => UIObject[];
-  getCanvasScreenshot: () => string;
+  getCanvasScreenshot: () => Promise<string>;
 };
 
 export type DesignCanvasProps = {
@@ -24,149 +25,67 @@ const SCALE = DISPLAY_W / CANVAS_W; // 0.8
 
 // ─── Module-level helpers ────────────────────────────────────────────────────
 
-function extractProps(obj: fabric.FabricObject): SelectedObjectProps {
-  const width = Math.round(obj.width * (obj.scaleX ?? 1));
-  const height = Math.round(obj.height * (obj.scaleY ?? 1));
-  if (obj instanceof fabric.Textbox) {
+function extractProps(obj: UIObject): SelectedObjectProps {
+  if (obj.type === "text") {
     return {
       objectType: "text",
-      width,
-      height,
+      width: obj.width,
+      height: obj.height,
       text: obj.text ?? "",
       fontSize: obj.fontSize ?? 14,
       fontWeight: String(obj.fontWeight ?? "400"),
-      textColor: typeof obj.fill === "string" ? obj.fill : "#0f172a",
+      textColor: obj.textColor ?? "#0f172a",
     };
   }
   return {
     objectType: "rect",
-    width,
-    height,
-    fill: typeof (obj as fabric.Rect).fill === "string"
-      ? (obj as fabric.Rect).fill as string
-      : "#e2e8f0",
-    radius: (obj as fabric.Rect).rx ?? 0,
+    width: obj.width,
+    height: obj.height,
+    fill: obj.fill ?? "#e2e8f0",
+    radius: obj.radius ?? 0,
   };
 }
 
-// Stamp custom metadata onto a Fabric object
-function tag(
-  o: fabric.FabricObject,
-  id: string,
-  role: string,
-  type: string,
-  parentId?: string,
-) {
-  const r = o as unknown as Record<string, unknown>;
-  r._uiId = id;
-  r._uiRole = role;
-  r._uiType = type;
-  if (parentId !== undefined) r._uiParentId = parentId;
-}
-
-// Shadow presets keyed by elevation level (0 = none)
-const SHADOWS = [
-  null,
-  new fabric.Shadow({ color: "rgba(0,0,0,0.08)", blur: 6,  offsetX: 0, offsetY: 2 }),
-  new fabric.Shadow({ color: "rgba(0,0,0,0.10)", blur: 18, offsetX: 0, offsetY: 4 }),
-  new fabric.Shadow({ color: "rgba(0,0,0,0.15)", blur: 32, offsetX: 0, offsetY: 8 }),
+const SHADOW_CSS = [
+  "",
+  "0 2px 6px rgba(0,0,0,0.08)",
+  "0 4px 18px rgba(0,0,0,0.10)",
+  "0 8px 32px rgba(0,0,0,0.15)",
 ];
-
-// Stamp extra visual metadata as custom properties so getAllObjects can read
-// them back even after the user moves/resizes the object.
-function tagExtra(o: fabric.FabricObject, obj: UIObject) {
-  const r = o as unknown as Record<string, unknown>;
-  r._uiElevation   = obj.elevation   ?? 0;
-  r._uiStroke      = obj.stroke      ?? "";
-  r._uiStrokeWidth = obj.strokeWidth ?? 1;
-}
-
-// Apply elevation shadow and stroke/border to a Fabric rect or image placeholder.
-function applyVisual(rect: fabric.Rect, obj: UIObject) {
-  const elv = Math.min(Math.max(Math.round(obj.elevation ?? 0), 0), 3);
-  if (elv > 0) rect.set("shadow", SHADOWS[elv]);
-  if (obj.stroke) {
-    rect.set({
-      stroke: obj.stroke,
-      strokeWidth: obj.strokeWidth ?? 1,
-      strokeUniform: true,      // stroke doesn't scale when object is resized
-    });
-  }
-}
-
-// Create Fabric objects from a UIObject. Returns [main, ...extras].
-// The main object always carries _uiId; label carries _uiParentId.
-function toFabricObjects(obj: UIObject): fabric.FabricObject[] {
-  if (obj.type === "rect") {
-    const rect = new fabric.Rect({
-      left: obj.x, top: obj.y, width: obj.width, height: obj.height,
-      fill: obj.fill ?? "#e2e8f0", rx: obj.radius ?? 0, ry: obj.radius ?? 0,
-    });
-    tag(rect, obj.id, obj.role, "rect");
-    tagExtra(rect, obj);
-    applyVisual(rect, obj);
-    return [rect];
-  }
-  if (obj.type === "text") {
-    const tb = new fabric.Textbox(obj.text ?? "", {
-      left: obj.x, top: obj.y, width: obj.width,
-      fontSize: obj.fontSize ?? 14,
-      fontWeight: obj.fontWeight !== undefined ? String(obj.fontWeight) : "normal",
-      fill: obj.textColor ?? "#0f172a",
-      fontFamily: "Inter, sans-serif",
-    });
-    tag(tb, obj.id, obj.role, "text");
-    return [tb];
-  }
-  if (obj.type === "image") {
-    const rect = new fabric.Rect({
-      left: obj.x, top: obj.y, width: obj.width, height: obj.height,
-      fill: "#f1f5f9", rx: obj.radius ?? 0, ry: obj.radius ?? 0,
-    });
-    tag(rect, obj.id, obj.role, "image");
-    tagExtra(rect, obj);
-    applyVisual(rect, obj);
-    const label = new fabric.Textbox("image", {
-      left: obj.x + obj.width / 2, top: obj.y + obj.height / 2,
-      width: 80, fontSize: 12, fill: "#94a3b8",
-      originX: "center", originY: "center",
-      selectable: false, evented: false,
-    });
-    tag(label, obj.id + "__label", obj.role, "image-label", obj.id);
-    return [rect, label];
-  }
-  return [];
-}
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
 const DesignCanvas = forwardRef<DesignCanvasHandle, DesignCanvasProps>(
   function DesignCanvas({ onSelectionChange }, ref) {
-    const canvasElRef = useRef<HTMLCanvasElement>(null);
-    const fabricRef = useRef<fabric.Canvas | null>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [objects, setObjects] = useState<UIObject[]>([]);
+    const [selectedId, setSelectedId] = useState<string | null>(null);
+
     const onSelectionChangeRef = useRef(onSelectionChange);
-    useEffect(() => { onSelectionChangeRef.current = onSelectionChange; });
+    useEffect(() => { onSelectionChangeRef.current = onSelectionChange; }, [onSelectionChange]);
 
-    // Canvas init + Fabric selection events
-    useEffect(() => {
-      const el = canvasElRef.current;
-      if (!el || fabricRef.current) return;
-      const fc = new fabric.Canvas(el, { width: CANVAS_W, height: CANVAS_H });
-      fabricRef.current = fc;
-
-      function notifySelected() {
-        const actives = fc.getActiveObjects();
-        if (actives.length !== 1) { onSelectionChangeRef.current(null); return; }
-        onSelectionChangeRef.current(extractProps(actives[0]));
+    const notifySelected = useCallback((id: string | null, objs: UIObject[] = objects) => {
+      if (!id) {
+        onSelectionChangeRef.current(null);
+        return;
       }
+      const obj = objs.find(o => o.id === id);
+      if (obj) {
+        onSelectionChangeRef.current(extractProps(obj));
+      } else {
+        onSelectionChangeRef.current(null);
+      }
+    }, [objects]);
 
-      fc.on("selection:created", notifySelected);
-      fc.on("selection:updated", notifySelected);
-      fc.on("selection:cleared", () => onSelectionChangeRef.current(null));
-      fc.on("object:modified", notifySelected);
-
-      return () => { fc.dispose(); fabricRef.current = null; };
-    }, []);
+    // We only want to notify the parent on selection *change*, not on every object update
+    // to avoid excessive re-renders during drag/resize.
+    const lastSelectedIdRef = useRef<string | null>(null);
+    useEffect(() => {
+      if (lastSelectedIdRef.current !== selectedId) {
+        lastSelectedIdRef.current = selectedId;
+        notifySelected(selectedId);
+      }
+    }, [selectedId, notifySelected]);
 
     // Keyboard delete
     useEffect(() => {
@@ -174,204 +93,108 @@ const DesignCanvas = forwardRef<DesignCanvasHandle, DesignCanvasProps>(
         if (e.key !== "Delete" && e.key !== "Backspace") return;
         const tag = (document.activeElement as HTMLElement | null)?.tagName;
         if (tag === "INPUT" || tag === "TEXTAREA") return;
-        const fc = fabricRef.current;
-        if (!fc) return;
-        const actives = fc.getActiveObjects();
-        if (actives.length === 0) return;
-        if (actives.some((o) => "isEditing" in o && (o as fabric.Textbox).isEditing)) return;
-        // Also remove any linked labels (_uiParentId matches deleted object's _uiId)
-        const deletedIds = new Set(actives.map((o) => (o as unknown as Record<string, unknown>)._uiId));
-        const labels = fc.getObjects().filter(
-          (o) => deletedIds.has((o as unknown as Record<string, unknown>)._uiParentId),
-        );
-        [...actives, ...labels].forEach((o) => fc.remove(o));
-        fc.discardActiveObject();
-        fc.renderAll();
-        onSelectionChangeRef.current(null);
+        if (!selectedId) return;
+
+        setObjects(prev => prev.filter(o => o.id !== selectedId));
+        setSelectedId(null);
       }
       window.addEventListener("keydown", onKeyDown);
       return () => window.removeEventListener("keydown", onKeyDown);
-    }, []);
+    }, [selectedId]);
 
     useImperativeHandle(
       ref,
       () => ({
-        renderObjects(objects: UIObject[]) {
-          const fc = fabricRef.current;
-          if (!fc) return;
-          fc.clear();
-          const sorted = [...objects].sort((a, b) => (a.z ?? 0) - (b.z ?? 0));
-          for (const obj of sorted) fc.add(...toFabricObjects(obj));
-          fc.renderAll();
+        renderObjects(newObjects: UIObject[]) {
+          const sorted = [...newObjects].sort((a, b) => (a.z ?? 0) - (b.z ?? 0));
+          // Assign sequential z index to ensure predictability
+          const normalized = sorted.map((o, idx) => ({ ...o, z: idx }));
+          setObjects(normalized);
+          setSelectedId(null);
         },
 
         clearCanvas() {
-          const fc = fabricRef.current;
-          if (!fc) return;
-          fc.clear();
-          fc.renderAll();
-          onSelectionChangeRef.current(null);
+          setObjects([]);
+          setSelectedId(null);
         },
 
         updateSelected(changes: Partial<SelectedObjectProps>) {
-          const fc = fabricRef.current;
-          if (!fc) return;
-          const obj = fc.getActiveObject();
-          if (!obj) return;
-          if (changes.width !== undefined) {
-            if (obj instanceof fabric.Textbox) {
-              obj.set("width", changes.width / (obj.scaleX ?? 1));
-            } else if (obj.width) {
-              obj.set("scaleX", changes.width / obj.width);
-            }
-          }
-          if (changes.height !== undefined && obj.height) {
-            obj.set("scaleY", changes.height / obj.height);
-          }
-          if (obj instanceof fabric.Rect) {
-            if (changes.fill !== undefined) obj.set("fill", changes.fill);
-            if (changes.radius !== undefined) { obj.set("rx", changes.radius); obj.set("ry", changes.radius); }
-          } else if (obj instanceof fabric.Textbox) {
-            if (changes.text !== undefined) obj.set("text", changes.text);
-            if (changes.fontSize !== undefined) obj.set("fontSize", changes.fontSize);
-            if (changes.fontWeight !== undefined) obj.set("fontWeight", changes.fontWeight);
-            if (changes.textColor !== undefined) obj.set("fill", changes.textColor);
-          }
-          obj.setCoords();
-          fc.renderAll();
+          setObjects(prev => {
+            const next = prev.map(o => {
+              if (o.id !== selectedId) return o;
+              const merged: UIObject = { ...o };
+              if (changes.width !== undefined) merged.width = changes.width;
+              if (changes.height !== undefined) merged.height = changes.height;
+              if (changes.fill !== undefined) merged.fill = changes.fill;
+              if (changes.radius !== undefined) merged.radius = changes.radius;
+              if (changes.text !== undefined) merged.text = changes.text;
+              if (changes.fontSize !== undefined) merged.fontSize = changes.fontSize;
+              if (changes.fontWeight !== undefined) merged.fontWeight = Number(changes.fontWeight);
+              if (changes.textColor !== undefined) merged.textColor = changes.textColor;
+              return merged;
+            });
+            return next;
+          });
         },
 
         getSelectedAsUIObject(): UIObject | null {
-          const fc = fabricRef.current;
-          if (!fc) return null;
-          const obj = fc.getActiveObject();
-          if (!obj) return null;
-          const r = obj as unknown as Record<string, unknown>;
-          const id = r._uiId;
-          const role = r._uiRole;
-          const uiType = r._uiType;
-          if (typeof id !== "string" || typeof role !== "string") return null;
-
-          const x = Math.round(obj.left ?? 0);
-          const y = Math.round(obj.top ?? 0);
-          const width = Math.round(obj.width * (obj.scaleX ?? 1));
-          const height = Math.round(obj.height * (obj.scaleY ?? 1));
-          const z = fc.getObjects().indexOf(obj);
-
-          if (obj instanceof fabric.Textbox) {
-            return {
-              id, role, type: "text", x, y, width, height, z,
-              text: obj.text ?? "",
-              fontSize: obj.fontSize,
-              fontWeight: Number(obj.fontWeight ?? 400),
-              textColor: typeof obj.fill === "string" ? obj.fill : "#0f172a",
-            };
-          }
-          if (obj instanceof fabric.Rect) {
-            const type = typeof uiType === "string"
-              ? uiType as UIObject["type"]
-              : "rect";
-            return {
-              id, role, type, x, y, width, height, z,
-              fill: typeof obj.fill === "string" ? obj.fill : "#e2e8f0",
-              radius: obj.rx ?? 0,
-            };
-          }
-          return null;
+          return objects.find(o => o.id === selectedId) || null;
         },
 
         replaceObject(id: string, newObj: UIObject) {
-          const fc = fabricRef.current;
-          if (!fc) return;
-
-          // Find existing object(s): main by _uiId, labels by _uiParentId
-          const allObjs = fc.getObjects();
-          let insertAt = allObjs.length;
-          const toRemove = allObjs.filter((o) => {
-            const r = o as unknown as Record<string, unknown>;
-            if (r._uiId === id) { insertAt = Math.min(insertAt, allObjs.indexOf(o)); return true; }
-            if (r._uiParentId === id) return true;
-            return false;
+          setObjects(prev => {
+            let replaced = false;
+            const next = prev.map(o => {
+              if (o.id === id) {
+                replaced = true;
+                return { ...newObj, z: o.z }; // Preserve z order
+              }
+              return o;
+            });
+            if (!replaced) {
+              next.push({ ...newObj, z: next.length });
+            }
+            return next;
           });
-          toRemove.forEach((o) => fc.remove(o));
-
-          // Create and add replacement
-          const newObjs = toFabricObjects(newObj);
-          if (newObjs.length === 0) return;
-          fc.add(...newObjs);
-
-          // Restore z-order: move main object back to its original stack position
-          const main = newObjs[0];
-          const topIdx = fc.getObjects().indexOf(main);
-          const steps = topIdx - Math.min(insertAt, fc.getObjects().length - 1);
-          for (let i = 0; i < steps; i++) fc.sendObjectBackwards(main, false);
-
-          // Select the replacement and update the panel
-          fc.setActiveObject(main);
-          onSelectionChangeRef.current(extractProps(main));
-          fc.renderAll();
+          setSelectedId(newObj.id);
         },
 
         getAllObjects(): UIObject[] {
-          const fc = fabricRef.current;
-          if (!fc) return [];
-          const result: UIObject[] = [];
-          fc.getObjects().forEach((obj, idx) => {
-            const r = obj as unknown as Record<string, unknown>;
-            if (r._uiParentId) return; // skip image labels
-            const id = r._uiId;
-            const role = r._uiRole;
-            const uiType = r._uiType;
-            if (typeof id !== "string" || typeof role !== "string") return;
-
-            const x = Math.round(obj.left ?? 0);
-            const y = Math.round(obj.top ?? 0);
-            const width = Math.round(obj.width * (obj.scaleX ?? 1));
-            const height = Math.round(obj.height * (obj.scaleY ?? 1));
-            const angle = obj.angle ? Math.round(obj.angle * 100) / 100 : 0;
-
-            // Read back metadata stamped by tagExtra()
-            const elevation   = typeof r._uiElevation   === "number" ? r._uiElevation   : 0;
-            const stroke      = typeof r._uiStroke      === "string" ? r._uiStroke      : undefined;
-            const strokeWidth = typeof r._uiStrokeWidth === "number" ? r._uiStrokeWidth : undefined;
-
-            if (obj instanceof fabric.Textbox) {
-              result.push({
-                id, role, type: "text", x, y, width, height, z: idx, angle,
-                text: obj.text ?? "",
-                fontSize: obj.fontSize,
-                fontWeight: Number(obj.fontWeight ?? 400),
-                textColor: typeof obj.fill === "string" ? obj.fill : "#0f172a",
-              });
-            } else if (obj instanceof fabric.Rect) {
-              const type = (typeof uiType === "string" ? uiType : "rect") as UIObject["type"];
-              result.push({
-                id, role, type, x, y, width, height, z: idx, angle,
-                fill: typeof obj.fill === "string" ? obj.fill : "#e2e8f0",
-                radius: obj.rx ?? 0,
-                elevation: elevation || undefined,
-                stroke: stroke || undefined,
-                strokeWidth: strokeWidth || undefined,
-              });
-            }
-          });
-          return result;
+          return objects;
         },
 
-        getCanvasScreenshot(): string {
-          const fc = fabricRef.current;
-          if (!fc) return "";
-          // White bg so the screenshot is useful for Gemini grounding
-          const prevBg = fc.backgroundColor;
-          fc.backgroundColor = "#ffffff";
-          const url = fc.toDataURL({ format: "jpeg", quality: 0.85 } as Parameters<typeof fc.toDataURL>[0]);
-          fc.backgroundColor = prevBg;
-          fc.renderAll();
-          return url;
+        async getCanvasScreenshot(): Promise<string> {
+          if (!containerRef.current) return "";
+
+          // hide moveable control before screenshot
+          const oldSelectedId = selectedId;
+          setSelectedId(null);
+          // Wait for a frame to ensure React unmounts Moveable
+          await new Promise(r => setTimeout(r, 50));
+
+          // force white background temporarily
+          const oldBg = containerRef.current.style.backgroundColor;
+          const oldBgImg = containerRef.current.style.backgroundImage;
+          containerRef.current.style.backgroundColor = "#ffffff";
+          containerRef.current.style.backgroundImage = "none";
+
+          try {
+            const url = await toJpeg(containerRef.current, { quality: 0.85, width: CANVAS_W, height: CANVAS_H });
+            return url;
+          } finally {
+            containerRef.current.style.backgroundColor = oldBg;
+            containerRef.current.style.backgroundImage = oldBgImg;
+            if (oldSelectedId) {
+              setSelectedId(oldSelectedId);
+            }
+          }
         },
       }),
-      [],
+      [objects, selectedId]
     );
+
+    // We render objects as normal DOM nodes matching exportToHTML styling
+    const targetRef = useRef<HTMLDivElement | null>(null);
 
     return (
       <div
@@ -379,6 +202,7 @@ const DesignCanvas = forwardRef<DesignCanvasHandle, DesignCanvasProps>(
         className="rounded-xl border border-slate-200 shadow-sm"
       >
         <div
+          ref={containerRef}
           style={{
             transform: `scale(${SCALE})`,
             transformOrigin: "top left",
@@ -387,9 +211,119 @@ const DesignCanvas = forwardRef<DesignCanvasHandle, DesignCanvasProps>(
             backgroundColor: "#ffffff",
             backgroundImage: "radial-gradient(circle, #cbd5e1 1.5px, transparent 1.5px)",
             backgroundSize: "24px 24px",
+            position: "relative",
+          }}
+          onClick={(e) => {
+            if (e.target === containerRef.current) setSelectedId(null);
           }}
         >
-          <canvas ref={canvasElRef} />
+          {objects.map((obj) => {
+            const isSelected = obj.id === selectedId;
+            const style: React.CSSProperties = {
+              position: "absolute",
+              left: obj.x,
+              top: obj.y,
+              width: obj.width,
+              height: obj.height,
+              zIndex: obj.z,
+              boxSizing: "border-box",
+              transform: obj.angle ? `rotate(${obj.angle}deg)` : undefined,
+              transformOrigin: "center center",
+            };
+
+            let content = null;
+
+            if (obj.type === "rect" || obj.type === "image") {
+              const bg = obj.type === "image" ? (obj.fill ?? "#f1f5f9") : (obj.fill ?? "#e2e8f0");
+              const shadow = obj.elevation ? SHADOW_CSS[Math.min(obj.elevation, 3)] : undefined;
+
+              Object.assign(style, {
+                background: bg,
+                borderRadius: obj.radius ? `${obj.radius}px` : undefined,
+                boxShadow: shadow,
+                border: obj.stroke ? `${obj.strokeWidth ?? 1}px solid ${obj.stroke}` : undefined,
+              });
+
+              if (obj.type === "image") {
+                Object.assign(style, {
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                });
+                content = <span style={{ color: "#94a3b8", fontSize: "12px", fontFamily: "Inter, sans-serif" }}>image</span>;
+              }
+            } else if (obj.type === "text") {
+              Object.assign(style, {
+                color: obj.textColor ?? "#0f172a",
+                fontSize: `${obj.fontSize ?? 14}px`,
+                fontWeight: obj.fontWeight ?? 400,
+                fontFamily: "Inter, sans-serif",
+                margin: 0,
+                lineHeight: 1.4,
+                whiteSpace: "pre-wrap",
+                overflow: "hidden",
+              });
+              content = obj.text;
+            }
+
+            return (
+              <div
+                key={obj.id}
+                id={obj.id}
+                ref={isSelected ? targetRef : undefined}
+                style={style}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedId(obj.id);
+                }}
+              >
+                {content}
+              </div>
+            );
+          })}
+
+          {selectedId && targetRef.current && (
+             <Moveable
+               target={targetRef.current}
+               container={containerRef.current}
+               draggable={true}
+               resizable={true}
+               rotatable={true}
+               origin={false}
+               onDrag={({ target, left, top }) => {
+                 target.style.left = `${left}px`;
+                 target.style.top = `${top}px`;
+               }}
+               onDragEnd={({ target }) => {
+                 const x = parseInt(target.style.left, 10);
+                 const y = parseInt(target.style.top, 10);
+                 setObjects(prev => prev.map(o => (o.id === selectedId ? { ...o, x, y } : o)));
+               }}
+               onResize={({ target, width, height, drag }) => {
+                 target.style.width = `${width}px`;
+                 target.style.height = `${height}px`;
+                 target.style.left = `${drag.left}px`;
+                 target.style.top = `${drag.top}px`;
+               }}
+               onResizeEnd={({ target }) => {
+                 const w = parseInt(target.style.width, 10);
+                 const h = parseInt(target.style.height, 10);
+                 const x = parseInt(target.style.left, 10);
+                 const y = parseInt(target.style.top, 10);
+                 setObjects(prev => prev.map(o => (o.id === selectedId ? { ...o, width: w, height: h, x, y } : o)));
+               }}
+               onRotate={({ target, transform, rotation }) => {
+                 target.style.transform = transform;
+               }}
+               onRotateEnd={({ target }) => {
+                 const match = target.style.transform.match(/rotate\((.+?)deg\)/);
+                 if (match && match[1]) {
+                   const angle = Math.round(parseFloat(match[1]) * 100) / 100;
+                   setObjects(prev => prev.map(o => (o.id === selectedId ? { ...o, angle } : o)));
+                 }
+               }}
+             />
+          )}
         </div>
       </div>
     );
