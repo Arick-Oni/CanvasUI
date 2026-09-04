@@ -1,5 +1,5 @@
 # dependencies
-/node_modules
+node_modules/
 /.pnp
 .pnp.js
 .yarn/install-state.gz
@@ -13,6 +13,7 @@
 
 # production
 /build
+/scraper/dist/
 
 # misc
 .DS_Store
@@ -29,3 +30,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# scraper output
+/scraper/output/
+/public/assets/stc/

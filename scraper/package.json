@@ -1,0 +1,25 @@
+{
+  "name": "stc-design-scraper",
+  "version": "1.0.0",
+  "description": "Standalone design and asset scraper for Save the Children websites, converting layouts to CanvasUI UIObject formats",
+  "type": "module",
+  "scripts": {
+    "scrape": "tsx src/cli.ts",
+    "server": "tsx src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "playwright": "^1.50.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
