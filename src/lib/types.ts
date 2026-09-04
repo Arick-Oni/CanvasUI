@@ -17,10 +17,12 @@ export type UIObject = {
   elevation?: number;   // 0 none · 1 sm · 2 md · 3 lg
   stroke?: string;      // border color hex
   strokeWidth?: number; // border width px
+  src?: string;
+  alt?: string;
 };
 
 export type SelectedObjectProps = {
-  objectType: "rect" | "text";
+  objectType: "rect" | "text" | "image";
   width: number;
   height: number;
   // rect
@@ -31,4 +33,7 @@ export type SelectedObjectProps = {
   fontSize?: number;
   fontWeight?: string;
   textColor?: string;
+  // image
+  src?: string;
+  alt?: string;
 };

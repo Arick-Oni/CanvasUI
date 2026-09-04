@@ -5,6 +5,8 @@ import type { ForwardRefExoticComponent, RefAttributes } from "react";
 import type { DesignCanvasHandle, DesignCanvasProps } from "@/components/DesignCanvas";
 import type { SelectedObjectProps, UIObject } from "@/lib/types";
 import { DEFAULT_MODEL_ID, MODEL_OPTIONS, getModelOption } from "@/lib/models";
+import STCDrawer from "@/components/STCDrawer";
+import type { ScrapedAsset } from "@/lib/stcRetriever";
 
 const DesignCanvas = dynamic(
   () => import("@/components/DesignCanvas"),
@@ -305,6 +307,48 @@ export default function Home() {
     setSelectedProps((prev) => (prev ? { ...prev, ...changes } : prev));
   }
 
+  function handleAddTemplate(objects: any[]) {
+    if (!canvasRef.current) return;
+
+    // Assign new IDs and update Z-indexes
+    const existingObjects = canvasRef.current.getAllObjects();
+    const maxZ = existingObjects.length > 0 ? Math.max(...existingObjects.map(o => o.z ?? 0)) : -1;
+
+    const newObjects = objects.map((obj, i) => ({
+      ...obj,
+      id: `${obj.id}-${Date.now()}-${i}`,
+      z: maxZ + 1 + i,
+    }));
+
+    canvasRef.current.renderObjects([...existingObjects, ...newObjects]);
+  }
+
+  function handleAddAsset(asset: ScrapedAsset) {
+    if (!canvasRef.current) return;
+
+    const existingObjects = canvasRef.current.getAllObjects();
+    const maxZ = existingObjects.length > 0 ? Math.max(...existingObjects.map(o => o.z ?? 0)) : -1;
+
+    // Estimate sensible default sizes
+    const width = asset.type === 'logo' ? 120 : 400;
+    const height = asset.type === 'logo' ? 60 : 300;
+
+    const newObj: UIObject = {
+      id: `img-${Date.now()}`,
+      type: "image",
+      role: asset.type === 'logo' ? "logo" : "featured-photo",
+      x: 100, // Default drop position
+      y: 100,
+      width,
+      height,
+      src: asset.publicUrl || asset.localPath?.replace('/app/scraper/output/assets', '/assets/stc') || asset.localPath,
+      alt: asset.alt || asset.semanticFilename || asset.altText || '',
+      z: maxZ + 1,
+    };
+
+    canvasRef.current.renderObjects([...existingObjects, newObj]);
+  }
+
   async function handleExport() {
     const objects = canvasRef.current?.getAllObjects() ?? [];
     if (objects.length === 0) {
@@ -489,6 +533,9 @@ export default function Home() {
         )}
         <DesignCanvas ref={canvasRef} onSelectionChange={handleSelectionChange} />
       </main>
+
+      {/* STC Right Sidebar */}
+      <STCDrawer onAddTemplate={handleAddTemplate} onAddAsset={handleAddAsset} />
 
       {/* HTML export preview modal */}
       {exportHtml !== null && (

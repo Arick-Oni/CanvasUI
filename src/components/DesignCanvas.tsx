@@ -249,12 +249,29 @@ const DesignCanvas = forwardRef<DesignCanvasHandle, DesignCanvasProps>(
               });
 
               if (obj.type === "image") {
-                Object.assign(style, {
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                });
-                content = <span style={{ color: "#94a3b8", fontSize: "12px", fontFamily: "Inter, sans-serif" }}>image</span>;
+                if (obj.src) {
+                  content = (
+                    <img
+                      src={obj.src}
+                      alt={obj.alt || ""}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        borderRadius: obj.radius ? `${obj.radius}px` : 0,
+                        pointerEvents: "none",
+                      }}
+                      draggable={false}
+                    />
+                  );
+                } else {
+                  Object.assign(style, {
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  });
+                  content = <span style={{ color: "#94a3b8", fontSize: "12px", fontFamily: "Inter, sans-serif" }}>image</span>;
+                }
               }
             } else if (obj.type === "text") {
               Object.assign(style, {
