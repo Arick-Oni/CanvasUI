@@ -31,8 +31,6 @@ function extractProps(obj: UIObject): SelectedObjectProps {
       objectType: "text",
       width: obj.width,
       height: obj.height,
-      z: obj.z ?? 0,
-      angle: obj.angle ?? 0,
       text: obj.text ?? "",
       fontSize: obj.fontSize ?? 14,
       fontWeight: String(obj.fontWeight ?? "400"),
@@ -40,15 +38,10 @@ function extractProps(obj: UIObject): SelectedObjectProps {
     };
   }
   return {
-    objectType: obj.type,
+    objectType: "rect",
     width: obj.width,
     height: obj.height,
-    z: obj.z ?? 0,
-    angle: obj.angle ?? 0,
-    elevation: obj.elevation ?? 0,
-    stroke: obj.stroke ?? "",
-    strokeWidth: obj.strokeWidth ?? 1,
-    fill: obj.fill ?? (obj.type === "image" ? "#f1f5f9" : "#e2e8f0"),
+    fill: obj.fill ?? "#e2e8f0",
     radius: obj.radius ?? 0,
   };
 }
@@ -67,6 +60,7 @@ const DesignCanvas = forwardRef<DesignCanvasHandle, DesignCanvasProps>(
     const containerRef = useRef<HTMLDivElement>(null);
     const [objects, setObjects] = useState<UIObject[]>([]);
     const [selectedId, setSelectedId] = useState<string | null>(null);
+    const [editingId, setEditingId] = useState<string | null>(null);
 
     const onSelectionChangeRef = useRef(onSelectionChange);
     useEffect(() => { onSelectionChangeRef.current = onSelectionChange; }, [onSelectionChange]);
@@ -98,8 +92,11 @@ const DesignCanvas = forwardRef<DesignCanvasHandle, DesignCanvasProps>(
     useEffect(() => {
       function onKeyDown(e: KeyboardEvent) {
         if (e.key !== "Delete" && e.key !== "Backspace") return;
-        const tag = (document.activeElement as HTMLElement | null)?.tagName;
+        const activeEl = document.activeElement as HTMLElement | null;
+        if (!activeEl) return;
+        const tag = activeEl.tagName;
         if (tag === "INPUT" || tag === "TEXTAREA") return;
+        if (activeEl.isContentEditable) return;
         if (!selectedId) return;
 
         setObjects(prev => prev.filter(o => o.id !== selectedId));
@@ -132,11 +129,6 @@ const DesignCanvas = forwardRef<DesignCanvasHandle, DesignCanvasProps>(
               const merged: UIObject = { ...o };
               if (changes.width !== undefined) merged.width = changes.width;
               if (changes.height !== undefined) merged.height = changes.height;
-              if (changes.z !== undefined) merged.z = changes.z;
-              if (changes.angle !== undefined) merged.angle = changes.angle;
-              if (changes.elevation !== undefined) merged.elevation = changes.elevation;
-              if (changes.stroke !== undefined) merged.stroke = changes.stroke;
-              if (changes.strokeWidth !== undefined) merged.strokeWidth = changes.strokeWidth;
               if (changes.fill !== undefined) merged.fill = changes.fill;
               if (changes.radius !== undefined) merged.radius = changes.radius;
               if (changes.text !== undefined) merged.text = changes.text;
@@ -145,10 +137,6 @@ const DesignCanvas = forwardRef<DesignCanvasHandle, DesignCanvasProps>(
               if (changes.textColor !== undefined) merged.textColor = changes.textColor;
               return merged;
             });
-            // Re-sort array if z-order changes
-            if (changes.z !== undefined) {
-              return next.sort((a, b) => (a.z ?? 0) - (b.z ?? 0)).map((o, idx) => ({ ...o, z: idx }));
-            }
             return next;
           });
         },
@@ -278,6 +266,8 @@ const DesignCanvas = forwardRef<DesignCanvasHandle, DesignCanvasProps>(
                 lineHeight: 1.4,
                 whiteSpace: "pre-wrap",
                 overflow: "hidden",
+                outline: "none", // Prevent focus ring when editing
+                cursor: editingId === obj.id ? "text" : "default",
               });
               content = obj.text;
             }
@@ -286,11 +276,39 @@ const DesignCanvas = forwardRef<DesignCanvasHandle, DesignCanvasProps>(
               <div
                 key={obj.id}
                 id={obj.id}
+                className="canvas-object"
                 ref={isSelected ? targetRef : undefined}
                 style={style}
+                contentEditable={editingId === obj.id}
+                suppressContentEditableWarning={true}
                 onClick={(e) => {
                   e.stopPropagation();
-                  setSelectedId(obj.id);
+                  if (editingId !== obj.id) setSelectedId(obj.id);
+                }}
+                onDoubleClick={(e) => {
+                  if (obj.type === "text") {
+                    e.stopPropagation();
+                    setEditingId(obj.id);
+                    // Focus the element so the cursor appears
+                    setTimeout(() => {
+                      const el = document.getElementById(obj.id);
+                      if (el) el.focus();
+                    }, 0);
+                  }
+                }}
+                onBlur={(e) => {
+                  if (editingId === obj.id) {
+                    setEditingId(null);
+                    const newText = e.currentTarget.textContent || "";
+                    setObjects((prev) =>
+                      prev.map((o) => (o.id === obj.id ? { ...o, text: newText } : o))
+                    );
+                    // Update external selection props if it's selected
+                    if (selectedId === obj.id) {
+                      const o = objects.find((x) => x.id === obj.id);
+                      if (o) onSelectionChangeRef.current(extractProps({ ...o, text: newText }));
+                    }
+                  }
                 }}
               >
                 {content}
@@ -298,7 +316,7 @@ const DesignCanvas = forwardRef<DesignCanvasHandle, DesignCanvasProps>(
             );
           })}
 
-          {selectedId && targetRef.current && (
+          {selectedId && !editingId && targetRef.current && (
              <Moveable
                target={targetRef.current}
                container={containerRef.current}
