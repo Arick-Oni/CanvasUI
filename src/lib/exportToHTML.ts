@@ -55,11 +55,18 @@ export function exportToHTML(objects: UIObject[]): string {
         : "";
 
       if (obj.type === "image") {
-        return (
-          `  <div style="${s}background:${bg};${radius}${shadow}${border}` +
-          `display:flex;align-items:center;justify-content:center;">` +
-          `<span style="color:#94a3b8;font-size:12px;font-family:Inter,sans-serif;">image</span></div>`
-        );
+        if (obj.src) {
+          return (
+            `  <div style="${s}background:${bg};${radius}${shadow}${border}">` +
+            `<img src="${esc(obj.src)}" alt="${esc(obj.alt || "")}" style="width:100%;height:100%;object-fit:cover;border-radius:${obj.radius ? obj.radius : 0}px;pointer-events:none;" draggable="false" /></div>`
+          );
+        } else {
+          return (
+            `  <div style="${s}background:${bg};${radius}${shadow}${border}` +
+            `display:flex;align-items:center;justify-content:center;">` +
+            `<span style="color:#94a3b8;font-size:12px;font-family:Inter,sans-serif;">image</span></div>`
+          );
+        }
       }
       return `  <div style="${s}background:${bg};${radius}${shadow}${border}"></div>`;
     }

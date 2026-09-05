@@ -2,6 +2,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { DESIGN_SYSTEM } from "@/lib/designSystem";
 import { getModelOption } from "@/lib/models";
 import { ollamaChat } from "@/lib/ollama";
+import { getRelevantAssets, getRelevantTemplates, getSTCBrandPrompt } from "@/lib/stcRetriever";
 
 export const runtime = "nodejs";
 
@@ -88,6 +89,8 @@ const responseSchema = {
       elevation:   { type: Type.NUMBER },
       stroke:      { type: Type.STRING },
       strokeWidth: { type: Type.NUMBER },
+      src:         { type: Type.STRING },
+      alt:         { type: Type.STRING },
     },
     required: ["id", "type", "role", "x", "y", "width", "height", "z"],
   },
@@ -116,6 +119,8 @@ const plainArraySchema = {
       elevation: { type: "number" },
       stroke: { type: "string" },
       strokeWidth: { type: "number" },
+      src: { type: "string" },
+      alt: { type: "string" },
     },
     required: ["id", "type", "role", "x", "y", "width", "height", "z"],
   },
@@ -129,8 +134,37 @@ export async function POST(req: Request) {
     }
 
     const modelOption = getModelOption(modelId);
+
+    // RAG Retrieval
+    const relevantAssets = getRelevantAssets(prompt);
+    const relevantTemplates = getRelevantTemplates(prompt);
+    const stcBrandPrompt = getSTCBrandPrompt();
+
+    let ragContext = `\n\n=== RAG Context ===\n`;
+    ragContext += stcBrandPrompt + "\n\n";
+
+    if (relevantAssets.length > 0) {
+      ragContext += `Available Brand Assets & Images:\n`;
+      relevantAssets.forEach(asset => {
+        const url = asset.publicUrl || asset.localPath?.replace('/app/scraper/output/assets', '/assets/stc') || asset.localPath;
+        ragContext += `- [${asset.type}] URL: ${url} | Alt: ${asset.alt || asset.semanticFilename || ''} | Tags: ${asset.tags?.join(', ')}\n`;
+      });
+      ragContext += `\nINSTRUCTION: When generating an 'image' UIObject, you MUST pick the most contextually relevant image URL from the list above and set it as the 'src' field, and set a descriptive 'alt' field. Do not invent image URLs.\n\n`;
+    }
+
+    if (relevantTemplates.length > 0) {
+       ragContext += `Example UI Blueprints (use as structural inspiration):\n`;
+       relevantTemplates.forEach((tpl, i) => {
+         // To save tokens, we only pass a simplified version of the first few objects
+         const simplifiedObjects = tpl.objects.slice(0, 5).map((o: any) => ({ type: o.type, role: o.role, x: o.x, y: o.y, width: o.width, height: o.height }));
+         ragContext += `Template ${i+1}: ${tpl.title} - ${tpl.description}\n`;
+         ragContext += `Snippet: ${JSON.stringify(simplifiedObjects)}\n\n`;
+       });
+    }
+
     const userText =
-      `Design this UI on a 1200×800 canvas: ${prompt}\n\n` +
+      `Design this UI on a 1200×800 canvas: ${prompt}\n` +
+      ragContext +
       `Return a JSON array of UIObjects. ` +
       `Every visual container (background, card, navbar, button, section) ` +
       `must be a "rect". Text goes on top. Use z to layer rects below their labels. ` +
