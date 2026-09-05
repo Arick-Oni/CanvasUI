@@ -210,10 +210,19 @@ function PropertiesPanel({
   );
 }
 
-// ─── HTML Preview Modal ─────────────────────────────────────────────────────
+function ExportModal({
+  html,
+  reactCode,
+  onClose,
+}: {
+  html: string;
+  reactCode?: string;
+  onClose: () => void;
+}) {
+  const [activeTab, setActiveTab] = useState<"html" | "react">("html");
+  const [copied, setCopied] = useState(false);
 
-function HtmlPreviewModal({ html, onClose }: { html: string; onClose: () => void }) {
-  function download() {
+  function downloadHtml() {
     const blob = new Blob([html], { type: "text/html" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -223,34 +232,100 @@ function HtmlPreviewModal({ html, onClose }: { html: string; onClose: () => void
     URL.revokeObjectURL(url);
   }
 
+  function downloadReact() {
+    if (!reactCode) return;
+    const blob = new Blob([reactCode], { type: "text/typescript" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "SaveTheChildrenAppeal.tsx";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function copyCode(text: string) {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-black/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex flex-col bg-black/75 backdrop-blur-sm">
       {/* Toolbar */}
-      <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 py-2.5">
-        <span className="text-sm font-semibold text-slate-800">HTML Preview</span>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={download}
-            className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-indigo-700"
-          >
-            Download index.html
-          </button>
+      <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white px-6 py-3 shadow-sm">
+        <div className="flex items-center gap-4">
+          <span className="text-base font-bold text-slate-900">Export Deliverable</span>
+          <div className="flex rounded-lg bg-slate-100 p-1 border border-slate-200">
+            <button
+              onClick={() => setActiveTab("html")}
+              className={`rounded-md px-3.5 py-1 text-xs font-bold transition ${
+                activeTab === "html"
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              🌐 Interactive HTML
+            </button>
+            <button
+              onClick={() => setActiveTab("react")}
+              className={`rounded-md px-3.5 py-1 text-xs font-bold transition ${
+                activeTab === "react"
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              ⚛️ React + Tailwind Component
+            </button>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2.5">
+          {activeTab === "html" ? (
+            <button
+              onClick={downloadHtml}
+              className="flex items-center gap-1.5 rounded-lg bg-[#DA291C] hover:bg-red-700 px-4 py-2 text-xs font-bold text-white transition shadow"
+            >
+              <span>⬇️</span> Download index.html
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={() => copyCode(reactCode || "")}
+                className="rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
+              >
+                {copied ? "✓ Copied!" : "📋 Copy Code"}
+              </button>
+              <button
+                onClick={downloadReact}
+                className="flex items-center gap-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 px-4 py-2 text-xs font-bold text-white transition shadow"
+              >
+                <span>⬇️</span> Download .tsx
+              </button>
+            </>
+          )}
           <button
             onClick={onClose}
-            className="flex h-7 w-7 items-center justify-center rounded-full text-lg text-slate-500 transition hover:bg-slate-100"
-            title="Close preview"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-lg text-slate-500 transition hover:bg-slate-100"
+            title="Close modal"
           >
             ×
           </button>
         </div>
       </div>
-      {/* iframe fills remaining height */}
-      <iframe
-        srcDoc={html}
-        sandbox="allow-scripts"
-        className="flex-1 border-0 bg-white"
-        title="HTML Export Preview"
-      />
+
+      {/* Content */}
+      {activeTab === "html" ? (
+        <iframe
+          srcDoc={html}
+          sandbox="allow-scripts allow-modals"
+          className="flex-1 border-0 bg-slate-950"
+          title="Interactive HTML Export Preview"
+        />
+      ) : (
+        <div className="flex-1 overflow-auto bg-slate-950 p-6 font-mono text-xs text-slate-200">
+          <pre className="whitespace-pre-wrap leading-relaxed">{reactCode}</pre>
+        </div>
+      )}
     </div>
   );
 }
@@ -266,6 +341,8 @@ export default function Home() {
   const [aiError, setAiError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [exportHtml, setExportHtml] = useState<string | null>(null);
+  const [exportReact, setExportReact] = useState<string | null>(null);
+  const [previewMode, setPreviewMode] = useState<boolean>(false);
   const [modelId, setModelId] = useState(DEFAULT_MODEL_ID);
   const [useScreenshot, setUseScreenshot] = useState(true);
   const canvasRef = useRef<DesignCanvasHandle>(null);
@@ -370,6 +447,7 @@ export default function Home() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Export failed");
       setExportHtml(data.html as string);
+      setExportReact(data.reactCode as string);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Export failed");
     } finally {
@@ -506,7 +584,7 @@ export default function Home() {
                 Exporting…
               </span>
             ) : (
-              "Export to HTML"
+              "Export Deliverables"
             )}
           </button>
           <button
@@ -523,6 +601,32 @@ export default function Home() {
 
       {/* Canvas work area */}
       <main className="relative flex flex-1 items-center justify-center bg-slate-100">
+        {/* Floating Mode Switcher: Edit Canvas vs Live Interactive Preview */}
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 rounded-full border border-slate-300/80 bg-white/95 p-1.5 shadow-lg backdrop-blur-md">
+          <button
+            type="button"
+            onClick={() => setPreviewMode(false)}
+            className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-bold transition ${
+              !previewMode
+                ? "bg-slate-900 text-white shadow-sm"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+            }`}
+          >
+            <span>✏️</span> Edit Canvas
+          </button>
+          <button
+            type="button"
+            onClick={() => setPreviewMode(true)}
+            className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-bold transition ${
+              previewMode
+                ? "bg-gradient-to-r from-red-600 to-[#DA291C] text-white shadow-sm"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+            }`}
+          >
+            <span>⚡</span> Live Interactive Preview
+          </button>
+        </div>
+
         {loading && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-100/70 backdrop-blur-sm">
             <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-5 py-3 shadow-md">
@@ -531,15 +635,22 @@ export default function Home() {
             </div>
           </div>
         )}
-        <DesignCanvas ref={canvasRef} onSelectionChange={handleSelectionChange} />
+        <DesignCanvas ref={canvasRef} previewMode={previewMode} onSelectionChange={handleSelectionChange} />
       </main>
 
       {/* STC Right Sidebar */}
       <STCDrawer onAddTemplate={handleAddTemplate} onAddAsset={handleAddAsset} />
 
-      {/* HTML export preview modal */}
+      {/* Export preview modal */}
       {exportHtml !== null && (
-        <HtmlPreviewModal html={exportHtml} onClose={() => setExportHtml(null)} />
+        <ExportModal
+          html={exportHtml}
+          reactCode={exportReact ?? undefined}
+          onClose={() => {
+            setExportHtml(null);
+            setExportReact(null);
+          }}
+        />
       )}
     </div>
   );

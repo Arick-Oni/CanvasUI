@@ -16,6 +16,7 @@ export type DesignCanvasHandle = {
 
 export type DesignCanvasProps = {
   onSelectionChange: (props: SelectedObjectProps | null) => void;
+  previewMode?: boolean;
 };
 
 const CANVAS_W = 1200;
@@ -67,11 +68,89 @@ const SHADOW_CSS = [
 // ─── Component ───────────────────────────────────────────────────────────────
 
 const DesignCanvas = forwardRef<DesignCanvasHandle, DesignCanvasProps>(
-  function DesignCanvas({ onSelectionChange }, ref) {
+  function DesignCanvas({ onSelectionChange, previewMode = false }, ref) {
     const containerRef = useRef<HTMLDivElement>(null);
     const [objects, setObjects] = useState<UIObject[]>([]);
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [editingId, setEditingId] = useState<string | null>(null);
+
+    // Interactive Preview State
+    const [donationAmount, setDonationAmount] = useState<number>(50);
+    const [frequency, setFrequency] = useState<string>("Monthly");
+    const [modalMessage, setModalMessage] = useState<string | null>(null);
+
+    // Clear selection when entering preview mode
+    useEffect(() => {
+      if (previewMode) {
+        setSelectedId(null);
+        setEditingId(null);
+      }
+    }, [previewMode]);
+
+    function handlePreviewClick(obj: UIObject) {
+      const text = obj.text?.trim() || "";
+      const role = obj.role?.toLowerCase() || "";
+
+      // Amount Selection ($25, $50, $100, $250)
+      const amtMatch = text.match(/^\$(\d+)$/);
+      if (amtMatch) {
+        const newAmt = parseInt(amtMatch[1]);
+        setDonationAmount(newAmt);
+        setObjects(prev => prev.map(o => {
+          const oText = o.text?.trim() || "";
+          if (/^\$\d+$/.test(oText)) {
+            const isMatch = oText === `$${newAmt}`;
+            return {
+              ...o,
+              textColor: isMatch ? "#DA291C" : "#111827",
+              fontWeight: isMatch ? 700 : 600,
+            };
+          }
+          // Highlight active button background rect if nearby
+          if (o.role?.toLowerCase().includes("amount-button")) {
+            const matchBtn = Math.abs(o.x - obj.x) < 20 && Math.abs(o.y - obj.y) < 20;
+            return {
+              ...o,
+              fill: matchBtn ? "#fef2f2" : "#ffffff",
+              stroke: matchBtn ? "#DA291C" : "#cbd5e1",
+              strokeWidth: matchBtn ? 2 : 1,
+            };
+          }
+          // Sync CTA button text
+          if (o.text?.includes("DONATE") || o.text?.includes("GIVE NOW")) {
+            return {
+              ...o,
+              text: `DONATE $${newAmt} ${frequency.toUpperCase()}`,
+            };
+          }
+          return o;
+        }));
+        return;
+      }
+
+      // Frequency toggle (Give Monthly / Give Once)
+      if (text === "Give Monthly" || text === "Give Once") {
+        const newFreq = text.replace("Give ", "");
+        setFrequency(newFreq);
+        setObjects(prev => prev.map(o => {
+          if (o.text?.includes("DONATE") || o.text?.includes("GIVE NOW")) {
+            return {
+              ...o,
+              text: `DONATE $${donationAmount} ${newFreq.toUpperCase()}`,
+            };
+          }
+          return o;
+        }));
+        return;
+      }
+
+      // Action click
+      if (text.includes("DONATE") || text.includes("GIVE NOW") || role.includes("cta-button")) {
+        setModalMessage(
+          `❤️ Thank you for your emergency gift of $${donationAmount} (${frequency})!\n\nYour support provides immediate therapeutic nutrition, clean water, and thermal blankets to children in crisis via Save the Children.`
+        );
+      }
+    }
 
     const onSelectionChangeRef = useRef(onSelectionChange);
     useEffect(() => { onSelectionChangeRef.current = onSelectionChange; }, [onSelectionChange]);
@@ -324,20 +403,42 @@ const DesignCanvas = forwardRef<DesignCanvasHandle, DesignCanvasProps>(
               content = obj.text;
             }
 
+            const isInteractive = previewMode && (
+              obj.text?.startsWith("$") ||
+              obj.text?.includes("DONATE") ||
+              obj.text?.includes("GIVE") ||
+              obj.text?.includes("Monthly") ||
+              obj.text?.includes("Once") ||
+              obj.role?.includes("button") ||
+              obj.role?.includes("cta")
+            );
+
+            if (previewMode) {
+              style.cursor = isInteractive ? "pointer" : "default";
+              if (isInteractive) {
+                style.transition = "transform 0.15s ease, box-shadow 0.15s ease";
+              }
+            }
+
             return (
               <div
                 key={obj.id}
                 id={obj.id}
-                className="canvas-object"
-                ref={isSelected ? targetRef : undefined}
+                className={`canvas-object ${isInteractive ? "hover:scale-[1.02] hover:brightness-105" : ""}`}
+                ref={!previewMode && isSelected ? targetRef : undefined}
                 style={style}
-                contentEditable={editingId === obj.id}
+                contentEditable={!previewMode && editingId === obj.id}
                 suppressContentEditableWarning={true}
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (previewMode) {
+                    handlePreviewClick(obj);
+                    return;
+                  }
                   if (editingId !== obj.id) setSelectedId(obj.id);
                 }}
                 onDoubleClick={(e) => {
+                  if (previewMode) return;
                   if (obj.type === "text") {
                     e.stopPropagation();
                     setEditingId(obj.id);
@@ -368,7 +469,7 @@ const DesignCanvas = forwardRef<DesignCanvasHandle, DesignCanvasProps>(
             );
           })}
 
-          {selectedId && !editingId && targetRef.current && (
+          {!previewMode && selectedId && !editingId && targetRef.current && (
              <Moveable
                target={targetRef.current}
                container={containerRef.current}
@@ -409,6 +510,25 @@ const DesignCanvas = forwardRef<DesignCanvasHandle, DesignCanvasProps>(
                  }
                }}
              />
+          )}
+
+          {/* Donation Confirmed Modal for Live Preview */}
+          {modalMessage && (
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+              <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl text-center space-y-4">
+                <div className="text-4xl">❤️</div>
+                <h3 className="text-xl font-bold text-slate-900">Donation Confirmed</h3>
+                <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-line">
+                  {modalMessage}
+                </p>
+                <button
+                  onClick={() => setModalMessage(null)}
+                  className="w-full bg-[#DA291C] hover:bg-red-700 text-white font-bold py-2.5 rounded-lg transition text-xs uppercase"
+                >
+                  Close & Continue
+                </button>
+              </div>
+            </div>
           )}
         </div>
       </div>

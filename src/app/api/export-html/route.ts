@@ -5,6 +5,8 @@ import { getModelOption } from "@/lib/models";
 import { ollamaChat } from "@/lib/ollama";
 import type { UIObject } from "@/lib/types";
 
+import { exportToReact } from "@/lib/exportToHTML";
+
 export const runtime = "nodejs";
 
 const SYSTEM_PROMPT =
@@ -17,11 +19,12 @@ const SYSTEM_PROMPT =
   "Produce visually STUNNING, HIGHLY POLISHED, SEMANTIC, and RESPONSIVE HTML powered by Tailwind CSS. " +
   "CRITICAL DESIGN REQUIREMENTS:\n" +
   "- Include <script src=\"https://cdn.tailwindcss.com\"></script> in <head>.\n" +
-  "- Include Google Font 'Inter' link in <head> and set body font to Inter.\n" +
-  "- Apply rich, modern styling: soft subtle card shadows (shadow-md/shadow-xl), smooth border radiuses (rounded-xl/rounded-2xl), subtle 1px border dividers (border-slate-200 or border-slate-700/50), vibrant indigo/violet gradient accents for CTAs, and sleek badges.\n" +
+  "- Include Google Fonts 'Inter', 'Oswald', 'Montserrat', 'Lato' in <head>.\n" +
+  "- Apply Save the Children brand styling: Official Brand Red (#DA291C) for primary CTA buttons, urgency badges, active donation buttons; dark charcoal (#111827) for high-contrast headers; soft card shadows (shadow-lg), subtle 1px border dividers (border-slate-200), and rounded pill buttons.\n" +
   "- Use proper semantic HTML5 tags (<header>, <nav>, <main>, <section>, <article>, <footer>, <button>, <h1>, <h2>, <p>).\n" +
   "- Layout must use modern Flexbox and CSS Grid — NEVER hardcode absolute positions.\n" +
-  "- Ensure rich contrast, elegant typography spacing, micro-hover interactions (e.g., transition-all hover:scale-[1.01]), and realistic placeholder icons or visual elements where appropriate.\n" +
+  "- When an image has an 'src' attribute, retain the exact src and alt. For logos, use object-contain.\n" +
+  "- Ensure rich contrast, elegant typography spacing, micro-hover interactions (e.g., transition-all hover:scale-[1.02]), and interactive JS for donation amount buttons ($25, $50, $100, $250).\n" +
   "- Output ONE complete, self-contained HTML document (with <!DOCTYPE html>, <html>, <head>, <body>).\n" +
   "- Output ONLY the raw HTML code — no markdown, no code block fences, no explanations.";
 
@@ -191,7 +194,7 @@ export async function POST(req: Request) {
       }
     }
 
-    return Response.json({ html });
+    return Response.json({ html, reactCode: exportToReact(objects) });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return Response.json({ error: message }, { status: 500 });
