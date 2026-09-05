@@ -69,7 +69,11 @@ export function getRelevantAssets(intent: string, type?: 'image' | 'logo', count
   // Score candidates
   const scored = candidates.map(asset => {
     let score = 0;
-    const searchableText = `${asset.semanticFilename} ${asset.alt} ${asset.tags?.join(' ') || ''}`.toLowerCase();
+    const altText = asset.alt || asset.altText || asset.description || '';
+    const filename = asset.semanticFilename || asset.fileName || '';
+    const category = asset.category || '';
+    const tags = asset.tags?.join(' ') || '';
+    const searchableText = `${filename} ${altText} ${category} ${tags}`.toLowerCase();
 
     for (const kw of keywords) {
       if (searchableText.includes(kw)) {
