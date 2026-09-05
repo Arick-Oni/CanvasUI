@@ -19,6 +19,8 @@ export type UIObject = {
   strokeWidth?: number; // border width px
   src?: string;
   alt?: string;
+  textAlign?: "left" | "center" | "right";
+  fontFamily?: string;
 };
 
 export type SelectedObjectProps = {
@@ -33,6 +35,8 @@ export type SelectedObjectProps = {
   fontSize?: number;
   fontWeight?: string;
   textColor?: string;
+  textAlign?: "left" | "center" | "right";
+  fontFamily?: string;
   // image
   src?: string;
   alt?: string;

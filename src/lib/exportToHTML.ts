@@ -55,10 +55,15 @@ export function exportToHTML(objects: UIObject[]): string {
         : "";
 
       if (obj.type === "image") {
+        const isLogo =
+          obj.role?.toLowerCase().includes("logo") ||
+          obj.role?.toLowerCase().includes("badge") ||
+          obj.src?.toLowerCase().includes("/logos/") ||
+          obj.src?.toLowerCase().endsWith(".svg");
         if (obj.src) {
           return (
             `  <div style="${s}background:${bg};${radius}${shadow}${border}">` +
-            `<img src="${esc(obj.src)}" alt="${esc(obj.alt || "")}" style="width:100%;height:100%;object-fit:cover;border-radius:${obj.radius ? obj.radius : 0}px;pointer-events:none;" draggable="false" /></div>`
+            `<img src="${esc(obj.src)}" alt="${esc(obj.alt || "")}" style="width:100%;height:100%;object-fit:${isLogo ? "contain" : "cover"};border-radius:${obj.radius ? obj.radius : 0}px;pointer-events:none;" draggable="false" /></div>`
           );
         } else {
           return (
@@ -76,10 +81,27 @@ export function exportToHTML(objects: UIObject[]): string {
       const size   = obj.fontSize  ?? 14;
       const weight = obj.fontWeight ?? 400;
       const text   = esc(obj.text ?? "");
+      const align  = obj.textAlign ?? (
+        obj.role?.toLowerCase().includes("button") ||
+        obj.role?.toLowerCase().includes("label") ||
+        obj.role?.toLowerCase().includes("badge") ||
+        obj.role?.toLowerCase().includes("pill")
+          ? "center"
+          : "left"
+      );
+      const isCentered = align === "center";
+      const isRight = align === "right";
+      const justify = isCentered ? "center" : isRight ? "flex-end" : "flex-start";
+      const defaultFont = obj.role?.toLowerCase().includes("heading")
+        ? "'Oswald', 'Montserrat', sans-serif"
+        : "'Lato', 'Inter', sans-serif";
+      const family = obj.fontFamily ?? defaultFont;
+
       return (
-        `  <p style="${s}color:${color};font-size:${size}px;font-weight:${weight};` +
-        `font-family:Inter,sans-serif;margin:0;line-height:1.4;` +
-        `white-space:pre-wrap;overflow:hidden;">${text}</p>`
+        `  <div style="${s}color:${color};font-size:${size}px;font-weight:${weight};` +
+        `font-family:${family};margin:0;line-height:1.25;` +
+        `display:flex;align-items:center;justify-content:${justify};text-align:${align};` +
+        `white-space:pre-wrap;overflow:hidden;">${text}</div>`
       );
     }
 
@@ -94,7 +116,7 @@ export function exportToHTML(objects: UIObject[]): string {
   <title>Exported Design</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lato:wght@400;700;900&family=Montserrat:wght@600;700;800&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; }
     body {

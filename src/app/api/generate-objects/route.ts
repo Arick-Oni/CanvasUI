@@ -1,70 +1,69 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import { DESIGN_SYSTEM } from "@/lib/designSystem";
 import { getModelOption } from "@/lib/models";
 import { ollamaChat } from "@/lib/ollama";
-import { getRelevantAssets, getRelevantTemplates, getSTCBrandPrompt } from "@/lib/stcRetriever";
+import { getGenerationAssetKit, getRelevantTemplates, CURATED_TEMPLATES } from "@/lib/stcRetriever";
 
 export const runtime = "nodejs";
 
-// Extend the design-system tokens with explicit layout instructions so the
-// model knows to use "rect" for every visual container, not just for text.
 const GENERATION_INSTRUCTION = `
-${DESIGN_SYSTEM}
+You are a senior UI/UX designer specializing in Save the Children and world-class NGO web appeals.
+You produce a flat JSON array of UIObjects (canvas size: 1200×800 pixels) that forms a complete, visually stunning, production-ready website.
 
----
-CANVAS: 1200×800 pixels. You produce a flat array of UIObjects that together
-form a complete, visually rich UI. Every element — background, card, navbar,
-button, divider, badge — is either a "rect", "text", or "image" object.
+BRAND SYSTEM & TOKENS:
+• Primary Red: #DA291C (official Save the Children brand red — use for primary CTA buttons, urgency badges, active donation buttons, and key metrics)
+• Dark Charcoal: #111827 (used for text, dark overlays, and headers)
+• Slate Gray: #475569 (for secondary/body copy)
+• Warm White: #ffffff (cards, navbar)
+• Soft Neutral: #f8fafc (backgrounds)
+• Border Stroke: #e2e8f0 or #cbd5e1 (cards, inactive buttons)
+• Typography:
+  - Hero Headlines: fontFamily: "'Oswald', sans-serif", fontSize: 38-46, fontWeight: 700
+  - Card & Section Titles: fontFamily: "'Montserrat', sans-serif", fontSize: 20-24, fontWeight: 700
+  - Body & Labels: fontFamily: "'Lato', sans-serif", fontSize: 13-16, fontWeight: 400-600
 
-OBJECT TYPES — use ONLY these three values for "type":
-  "rect"  → every visual box: page background, section fill, card, navbar,
-             hero panel, button, badge, input field, avatar circle, divider.
-             Set fill (hex color) and radius (px).
-  "text"  → every piece of readable copy: headings, body, nav links,
-             button labels, captions, tag text.
-             Set text, fontSize, fontWeight, textColor.
-  "image" → image placeholder boxes only.
+OBJECT TYPES (use ONLY these three values for "type"):
+• "rect"  → visual containers: navbar, background, hero scrim, cards, buttons, badges, pill toggles.
+            Fields: x, y, width, height, fill (hex/rgba), radius (px), elevation (0-3), stroke, strokeWidth, z.
+• "text"  → all copy: headings, body paragraphs, button labels, badge labels, statistics.
+            Fields: x, y, width, height, text, fontSize, fontWeight, textColor, textAlign ("left"|"center"|"right"), fontFamily, z.
+            CRITICAL RULE FOR BUTTONS & BADGES: Always match the text object's x, y, width, and height to the underlying button rect, and set textAlign: "center" so it is perfectly centered!
+• "image" → genuine editorial photos, brand logos, and trust badges.
+            Fields: x, y, width, height, role ("hero-photo"|"brand-logo"|"trust-badge"), src (pick from provided authentic assets), alt, z.
 
-LAYERING: z is the draw order (0 = furthest back, higher = in front).
-  Background rects: z 0–2.  Section/card rects: z 3–6.  Text on top: z 7+.
-  Always give a rect a lower z than the text sitting on top of it.
+CANVAS COMPOSITION BLUEPRINT (Total 1200×800):
+1. TOP NAVBAR (y:0 to 70, width:1200):
+   - Background rect: x:0, y:0, width:1200, height:70, fill:"#ffffff", stroke:"#e2e8f0", z:10
+   - Brand Logo image: x:60, y:15, width:180, height:40, role:"brand-logo", src:Save the Children logo URL, z:11
+   - Nav links text: 2-3 links (Emergencies, What We Do, Stories) at x:280-500, y:25, z:11
+   - Top Donate button: rect x:1020, y:14, w:120, h:42, fill:"#DA291C", radius:6, z:11
+   - Top Donate label: text x:1020, y:14, w:120, h:42, text:"DONATE", textColor:"#ffffff", textAlign:"center", fontWeight:700, z:12
 
-SIZING: canvas is 1200×800. A full-width background rect spans x:0 y:0
-w:1200 h:800. A navbar bar is typically x:0 y:0 w:1200 h:64.
+2. FULL-BLEED HERO SECTION (y:70 to 550, width:1200):
+   - Hero background photo: image x:0, y:70, w:1200, h:480, role:"hero-photo", src:provided editorial photo URL, z:1
+   - Dark Scrim Overlay: rect x:0, y:70, w:1200, h:480, fill:"rgba(17, 24, 39, 0.72)", z:2
+   - Urgency Badge: rect x:60, y:110, w:190, h:32, fill:"#DA291C", radius:4, z:3
+   - Urgency Badge Text: text x:60, y:110, w:190, h:32, text:"URGENT CRISIS APPEAL", textColor:"#ffffff", textAlign:"center", fontSize:12, fontWeight:700, z:4
+   - Hero Headline: text x:60, y:160, w:620, h:110, text:Headline based on prompt, fontSize:42, fontWeight:700, textColor:"#ffffff", fontFamily:"'Oswald', sans-serif", z:3
+   - Hero Body Copy: text x:60, y:285, w:600, h:75, text:Compelling description of crisis impact, fontSize:16, textColor:"#f1f5f9", fontFamily:"'Lato', sans-serif", z:3
 
-EXAMPLE — a button labeled "Get Started":
-  { "id":"btn-bg",  "type":"rect", "role":"cta-background",
-    "x":520,"y":380,"width":160,"height":48,
-    "fill":"#4f46e5","radius":8,"z":5 }
-  { "id":"btn-txt", "type":"text", "role":"cta-label",
-    "x":520,"y":392,"width":160,"height":24,
-    "text":"Get Started","fontSize":15,"fontWeight":600,
-    "textColor":"#ffffff","z":6 }
+   - FLOATING DONATION CARD (x:740, y:95, w:400, h:430):
+     - Card background: rect x:740, y:95, w:400, h:430, fill:"#ffffff", radius:12, elevation:3, stroke:"#e2e8f0", z:4
+     - Card Title: text x:770, y:115, w:340, h:30, text:"Make an Emergency Donation", fontSize:20, fontWeight:700, textColor:"#111827", z:5
+     - Frequency Toggle: Monthly / Give Once pill background + active red pill + labels (z:5-7)
+     - 4 Amount Buttons ($25, $50, $100, $250): 4 pill rects (w:78, h:48). One active (fill:"#fef2f2", stroke:"#DA291C", strokeWidth:2, textColor:"#DA291C"), others white.
+     - Impact Description Box: rect fill:"#f8fafc" + text (e.g. "$50 provides emergency therapeutic food kits for malnourished children.")
+     - Submit Button: rect x:770, y:330, w:340, h:50, fill:"#DA291C", radius:8, elevation:2, z:5
+     - Submit Label: text x:770, y:330, w:340, h:50, text:"DONATE NOW", textColor:"#ffffff", textAlign:"center", fontSize:16, fontWeight:700, z:6
+     - Trust Row: text "SECURE PAYMENT" + 3 trust badge images (Visa, Mastercard, PayPal) at x:920-1080, y:395, z:5-6
 
-VISUAL DEPTH — use these fields on rect objects:
-  elevation: 0 (flat background), 1 (subtle card shadow), 2 (card/panel),
-             3 (floating/modal). Cards always get elevation 1 or 2.
-  stroke + strokeWidth: use "#e2e8f0" stroke with strokeWidth 1 for input
-  fields, bordered cards, and image placeholders.
-  Do NOT give elevation to full-width background rects (z:0).
+3. IMPACT STATS ROW (y:550 to 800, width:1200):
+   - Background rect: x:0, y:550, w:1200, h:250, fill:"#f8fafc", z:1
+   - 3 Stat Cards (x:60, 430, 800, w:340, h:170):
+     - Card rects: fill:"#ffffff", radius:8, elevation:1, stroke:"#e2e8f0", z:2
+     - Metric numbers: text fontSize:42, fontWeight:700, textColor:"#DA291C", fontFamily:"'Oswald', sans-serif", z:3 (e.g. "85%", "45M+", "120+")
+     - Metric descriptions: text fontSize:14, textColor:"#475569", z:3
 
-TYPOGRAPHIC SCALE:
-  Page hero headline: fontSize 48, fontWeight 700
-  Section heading:    fontSize 32, fontWeight 700
-  Card title:         fontSize 20, fontWeight 600
-  Body text:          fontSize 16, fontWeight 400
-  Caption / label:    fontSize 13, fontWeight 400
-
-REQUIREMENTS for every design:
-  • At least one full-width background rect (z:0, fill:#f8fafc or #0f172a).
-  • A top navbar rect (z:1, fill:#ffffff or #1e293b, elevation:1 or stroke).
-  • Named section containers (hero, features grid, pricing/CTA cards, footer) layered above.
-  • Cards get white fill + elevation:2 + radius:12 or 16 + subtle stroke "#e2e8f0".
-  • Pill badges/tags (rect fill:#eef2ff radius:999 z:N, text fill:#4f46e5 fontSize:12 fontWeight:600).
-  • Buttons: gradient/primary rect fill:#4f46e5 radius:8 z:N, then text on top z:N+1.
-  • Text objects always sit on top of their container rect with high contrast textColor.
-  • Aim for 35–55 objects so the layout is detailed, balanced, and visually impressive.
-  • Use design-system tokens and clean typography scaling.
+Aim for 35–50 well-layered, rich objects. DO NOT invent arbitrary fake image URLs; pick only from the provided list.
 `.trim();
 
 const responseSchema = {
@@ -85,6 +84,8 @@ const responseSchema = {
       fontSize:    { type: Type.NUMBER },
       fontWeight:  { type: Type.NUMBER },
       textColor:   { type: Type.STRING },
+      textAlign:   { type: Type.STRING, enum: ["left", "center", "right"] },
+      fontFamily:  { type: Type.STRING },
       z:           { type: Type.NUMBER },
       elevation:   { type: Type.NUMBER },
       stroke:      { type: Type.STRING },
@@ -96,7 +97,6 @@ const responseSchema = {
   },
 };
 
-// Plain-JSON-Schema mirror of `responseSchema` above, for Ollama's `format` field.
 const plainArraySchema = {
   type: "array",
   items: {
@@ -115,6 +115,8 @@ const plainArraySchema = {
       fontSize: { type: "number" },
       fontWeight: { type: "number" },
       textColor: { type: "string" },
+      textAlign: { type: "string", enum: ["left", "center", "right"] },
+      fontFamily: { type: "string" },
       z: { type: "number" },
       elevation: { type: "number" },
       stroke: { type: "string" },
@@ -135,40 +137,39 @@ export async function POST(req: Request) {
 
     const modelOption = getModelOption(modelId);
 
-    // RAG Retrieval
-    const relevantAssets = getRelevantAssets(prompt);
-    const relevantTemplates = getRelevantTemplates(prompt);
-    const stcBrandPrompt = getSTCBrandPrompt();
+    // Retrieve full asset kit (logos, contextual photos, trust badges)
+    const assetKit = getGenerationAssetKit(prompt);
 
-    let ragContext = `\n\n=== RAG Context ===\n`;
-    ragContext += stcBrandPrompt + "\n\n";
-
-    if (relevantAssets.length > 0) {
-      ragContext += `Available Brand Assets & Images:\n`;
-      relevantAssets.forEach(asset => {
-        const url = asset.publicUrl || asset.localPath?.replace('/app/scraper/output/assets', '/assets/stc') || asset.localPath;
-        ragContext += `- [${asset.type}] URL: ${url} | Alt: ${asset.alt || asset.semanticFilename || ''} | Tags: ${asset.tags?.join(', ')}\n`;
+    let ragContext = `\n\n=== AUTHENTIC SAVE THE CHILDREN ASSETS (Use these exact paths for 'src' in image objects) ===\n`;
+    if (assetKit.logos.length > 0) {
+      ragContext += `Brand Logos:\n`;
+      assetKit.logos.forEach(a => {
+        ragContext += `- [logo] URL: ${a.publicUrl || a.localPath} | Alt: ${a.altText || 'Save the Children'}\n`;
       });
-      ragContext += `\nINSTRUCTION: When generating an 'image' UIObject, you MUST pick the most contextually relevant image URL from the list above and set it as the 'src' field, and set a descriptive 'alt' field. Do not invent image URLs.\n\n`;
     }
 
-    if (relevantTemplates.length > 0) {
-       ragContext += `Example UI Blueprints (use as structural inspiration):\n`;
-       relevantTemplates.forEach((tpl, i) => {
-         // To save tokens, we only pass a simplified version of the first few objects
-         const simplifiedObjects = tpl.objects.slice(0, 5).map((o: any) => ({ type: o.type, role: o.role, x: o.x, y: o.y, width: o.width, height: o.height }));
-         ragContext += `Template ${i+1}: ${tpl.title} - ${tpl.description}\n`;
-         ragContext += `Snippet: ${JSON.stringify(simplifiedObjects)}\n\n`;
-       });
+    if (assetKit.photos.length > 0) {
+      ragContext += `Editorial Photos:\n`;
+      assetKit.photos.forEach(a => {
+        ragContext += `- [photo] URL: ${a.publicUrl || a.localPath} | Alt: ${a.altText || a.description || 'Editorial Photo'} | Tags: ${a.tags?.join(', ')}\n`;
+      });
     }
+
+    if (assetKit.badges.length > 0) {
+      ragContext += `Trust & Payment Badges:\n`;
+      assetKit.badges.forEach(a => {
+        ragContext += `- [trust-badge] URL: ${a.publicUrl || a.localPath} | Alt: ${a.altText || 'Payment Badge'}\n`;
+      });
+    }
+
+    const curatedSnippet = CURATED_TEMPLATES[0].objects.slice(0, 8);
+    ragContext += `\nSTRUCTURAL PATTERN REFERENCE:\n${JSON.stringify(curatedSnippet)}\n`;
 
     const userText =
-      `Design this UI on a 1200×800 canvas: ${prompt}\n` +
+      `Design a comprehensive Save the Children appeal on the 1200×800 canvas for: "${prompt}"\n` +
       ragContext +
-      `Return a JSON array of UIObjects. ` +
-      `Every visual container (background, card, navbar, button, section) ` +
-      `must be a "rect". Text goes on top. Use z to layer rects below their labels. ` +
-      `Make it visually rich — real backgrounds and cards, not just floating text.`;
+      `\nGenerate the complete JSON array of UIObjects with 35–50 elements following the Save the Children Brand Blueprint. ` +
+      `Ensure button text is perfectly aligned with textAlign: "center" and use the exact authentic asset URLs provided above.`;
 
     let raw: string;
     if (modelOption.provider === "ollama") {
@@ -201,11 +202,11 @@ export async function POST(req: Request) {
     }
 
     const objects = JSON.parse(raw);
+    const list = Array.isArray(objects) ? objects : objects.objects || [];
 
-    // Safety filter: drop any objects with an unrecognised type so they don't
-    // silently disappear on the canvas.
-    const valid = (objects as { type: string }[]).filter(
-      (o) => o.type === "rect" || o.type === "text" || o.type === "image",
+    // Filter valid objects
+    const valid = list.filter(
+      (o: any) => o && (o.type === "rect" || o.type === "text" || o.type === "image")
     );
 
     return Response.json({ objects: valid });

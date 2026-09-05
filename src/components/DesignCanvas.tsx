@@ -35,6 +35,17 @@ function extractProps(obj: UIObject): SelectedObjectProps {
       fontSize: obj.fontSize ?? 14,
       fontWeight: String(obj.fontWeight ?? "400"),
       textColor: obj.textColor ?? "#0f172a",
+      textAlign: obj.textAlign ?? "left",
+      fontFamily: obj.fontFamily,
+    };
+  }
+  if (obj.type === "image") {
+    return {
+      objectType: "image",
+      width: obj.width,
+      height: obj.height,
+      src: obj.src,
+      alt: obj.alt,
     };
   }
   return {
@@ -250,6 +261,11 @@ const DesignCanvas = forwardRef<DesignCanvasHandle, DesignCanvasProps>(
 
               if (obj.type === "image") {
                 if (obj.src) {
+                  const isLogo =
+                    obj.role?.toLowerCase().includes("logo") ||
+                    obj.role?.toLowerCase().includes("badge") ||
+                    obj.src.toLowerCase().includes("/logos/") ||
+                    obj.src.toLowerCase().endsWith(".svg");
                   content = (
                     <img
                       src={obj.src}
@@ -257,7 +273,7 @@ const DesignCanvas = forwardRef<DesignCanvasHandle, DesignCanvasProps>(
                       style={{
                         width: "100%",
                         height: "100%",
-                        objectFit: "cover",
+                        objectFit: isLogo ? "contain" : "cover",
                         borderRadius: obj.radius ? `${obj.radius}px` : 0,
                         pointerEvents: "none",
                       }}
@@ -274,13 +290,32 @@ const DesignCanvas = forwardRef<DesignCanvasHandle, DesignCanvasProps>(
                 }
               }
             } else if (obj.type === "text") {
+              const align = obj.textAlign ?? (
+                obj.role?.toLowerCase().includes("button") ||
+                obj.role?.toLowerCase().includes("label") ||
+                obj.role?.toLowerCase().includes("badge") ||
+                obj.role?.toLowerCase().includes("pill")
+                  ? "center"
+                  : "left"
+              );
+              const isCentered = align === "center";
+              const isRight = align === "right";
+              const defaultFont = obj.role?.toLowerCase().includes("heading")
+                ? "'Oswald', 'Montserrat', sans-serif"
+                : "'Lato', 'Inter', sans-serif";
+
               Object.assign(style, {
                 color: obj.textColor ?? "#0f172a",
                 fontSize: `${obj.fontSize ?? 14}px`,
                 fontWeight: obj.fontWeight ?? 400,
-                fontFamily: "Inter, sans-serif",
+                fontFamily: obj.fontFamily ?? defaultFont,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: isCentered ? "center" : isRight ? "flex-end" : "flex-start",
+                textAlign: align,
+                letterSpacing: obj.role?.toLowerCase().includes("badge") || (obj.role?.toLowerCase().includes("heading") && (obj.fontWeight ?? 400) >= 600) ? "0.02em" : "normal",
                 margin: 0,
-                lineHeight: 1.4,
+                lineHeight: 1.25,
                 whiteSpace: "pre-wrap",
                 overflow: "hidden",
                 outline: "none", // Prevent focus ring when editing
